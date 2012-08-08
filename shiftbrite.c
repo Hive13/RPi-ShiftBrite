@@ -33,9 +33,6 @@
 #include <math.h>
 #include <stddef.h>
 
-// Is this the best way to do this? It requires another file to have inited
-// properly.
-extern int delay_usec;
 static unsigned char shiftbrite_image[3*SHIFTBRITE_MAX_X*SHIFTBRITE_MAX_Y];
 // Dot correction values
 static int correct_r = 65;
@@ -56,18 +53,24 @@ int rpi_gpio_init() {
 void spi_write(uint32_t value) {
 
     int polarity = 0;
- 
+
+    // Send most-significant bit first
     int i;
-    for(i = 32; i > 0; --i) {
-        bcm2835_gpio_write(RPI_SPI_MOSI, value & 0x1);
+    for(i = 0; i < 32; ++i) {
+        bcm2835_gpio_write(RPI_SPI_MOSI, value >> 31);
 
+        //printf("Clock in...\n");
         bcm2835_gpio_write(RPI_SPI_CLK, !polarity);
-        //delayMicroseconds(1);
+        int j = 1000;
+        while(j--);
         bcm2835_gpio_write(RPI_SPI_CLK, polarity);
+        //printf("Clock out...\n");
 
-        value = value >> 1;
+        value = value << 1;
         // this delays far far more it seems...
-        delayMicroseconds(1);
+        //delayMicroseconds(1);
+        j = 1000;
+        while(j--);
     }
 }
 
@@ -85,11 +88,12 @@ void shiftbrite_command(int cmd, int red, int green, int blue) {
     ROM_SSIDataPut(SSI0_BASE, green);
     while(ROM_SSIBusy(SSI0_BASE));*/
 
-    unsigned char b1 = cmd << 6 | blue << 4;
-    unsigned char b2 = blue << 4 | red >> 6;
-    unsigned char b3 = red << 2 | green >> 8;
-    unsigned char b4 = green;
-    //bcm2835_gpio_write(RPI_SPI_MOSI
+    uint32_t val = (blue & 0x3FF)
+                 | ((green & 0x3FF) << 10)
+                 | ((red & 0x3FF)   << 20)
+                 | ((cmd & 0x3)     << 30);
+    //printf("cmd: %08X\n", val);
+    spi_write(val);
 }
 
 void shiftbrite_set_dot_correction(int r, int g, int b) {
