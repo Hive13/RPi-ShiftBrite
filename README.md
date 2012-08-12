@@ -29,3 +29,9 @@ E0/Yellow --> Ground
 C0/Black --> GPIO #11 (CLK)
 V+/Red --> Power
 
+GPIO #9 is MISO and is unused.
+
+References
+==========
+http://elinux.org/RPi_Low-level_peripherals
+
