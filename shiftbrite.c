@@ -1,28 +1,5 @@
-/*
-#include "inc/hw_ethernet.h"
-#include "inc/hw_ints.h"
-#include "inc/hw_memmap.h"
-#include "inc/hw_types.h"
-#include "inc/hw_udma.h"
-#include "driverlib/debug.h"
-#include "driverlib/ethernet.h"
-#include "driverlib/flash.h"
-#include "driverlib/gpio.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/rom.h"
-#include "driverlib/sysctl.h"
-#include "driverlib/systick.h"
-#include "driverlib/udma.h"
-#include "driverlib/ssi.h"
-#include "driverlib/pin_map.h"
-#include "utils/uartstdio.h"
-#include "utils/ustdlib.h"
-#include "uip-conf.h"
-*/
 #include "shiftbrite.h"
-
 #include <bcm2835.h>
-
 
 #define RPI_SPI_MOSI RPI_GPIO_P1_19 // GPIO 10
 #define RPI_SPI_MISO RPI_GPIO_P1_21 // GPIO 9
@@ -58,19 +35,11 @@ void spi_write(uint32_t value) {
     int i;
     for(i = 0; i < 32; ++i) {
         bcm2835_gpio_write(RPI_SPI_MOSI, value >> 31);
-
-        //printf("Clock in...\n");
         bcm2835_gpio_write(RPI_SPI_CLK, !polarity);
-        int j = 1000;
-        while(j--);
         bcm2835_gpio_write(RPI_SPI_CLK, polarity);
-        //printf("Clock out...\n");
+        bcm2835_gpio_write(RPI_SPI_MOSI, 0);
 
         value = value << 1;
-        // this delays far far more it seems...
-        //delayMicroseconds(1);
-        j = 1000;
-        while(j--);
     }
 }
 
@@ -88,9 +57,9 @@ void shiftbrite_command(int cmd, int red, int green, int blue) {
     ROM_SSIDataPut(SSI0_BASE, green);
     while(ROM_SSIBusy(SSI0_BASE));*/
 
-    uint32_t val = (blue & 0x3FF)
-                 | ((green & 0x3FF) << 10)
-                 | ((red & 0x3FF)   << 20)
+    uint32_t val = (green & 0x3FF)
+                 | ((red & 0x3FF) << 10)
+                 | ((blue & 0x3FF)   << 20)
                  | ((cmd & 0x3)     << 30);
     //printf("cmd: %08X\n", val);
     spi_write(val);
