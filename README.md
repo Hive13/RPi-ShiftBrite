@@ -31,6 +31,22 @@ V+/Red --> Power
 
 GPIO #9 is MISO and is unused.
 
+Notes on issues
+===============
+2012-08-12
+If you start to mix colors, the fucking annoying power/noise issues start
+popping up yet again, even on a chain of only 8. I checked the voltage at the
+end of the chain (I'm running it from a 9V supply) and it has not sagged
+enough to matter.
+G + B is okay.
+R + B is okay.
+R + G is okay.
+Combining everything (i.e. white) is where issues start to come in.
+Yet if I refresh constantly, it only seems to take the form of occasional
+flickering.
+This issue, perplexingly, _improved_ when I hooked up the board to the chain
+of all 56 lights. I don't understand this one bit.
+
 References
 ==========
 http://elinux.org/RPi_Low-level_peripherals
