@@ -34,7 +34,7 @@ GPIO #9 is MISO and is unused.
 Notes on issues
 ===============
 2012-08-12
-If you start to mix colors, the fucking annoying power/noise issues start
+If you start to mix colors, the annoying power/noise issues start
 popping up yet again, even on a chain of only 8. I checked the voltage at the
 end of the chain (I'm running it from a 9V supply) and it has not sagged
 enough to matter.
