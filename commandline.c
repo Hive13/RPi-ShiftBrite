@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 }
 
 void print_help(char * name) {
-    printf("Usage: %s [-t|-c <val>] [-r <time>] [-v]\n");
+    printf("Usage: %s [-t|-c <val>] [-r <time>] [-v]\n", name);
     printf("  -t: Print a cycling test pattern\n");
     printf("  -c: Print a constant white value, 0-255\n");
     printf("  -v: Verbosely echo for each frame\n");

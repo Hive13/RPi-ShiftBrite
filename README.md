@@ -4,17 +4,10 @@ RPi-ShiftBrite
 The aim of this project is to control ShiftBrite LEDs using the Raspberry Pi
 board.
 
-This derives from a few other projects:
-https://github.com/Hive13/procyon-osc
-https://github.com/Hive13/windowmatrix
+This requires the bcm2835 library: http://www.open.com.au/mikem/bcm2835/
 
-Build command (because I need to do a Makefile still):
-gcc -O3 test.c shiftbrite.c -lbcm2835 -static -o test.o
-
-Progress so far:
- - I can send an all-black image to eight of these in a row.
- - I can sort of send other images though this is not yet perfect.
-
+Technical Details
+=================
 This uses the GPIO pins to bit-bang SPI (plus a latch) because I could not get
 spidev to do what I need - the ShiftBrites require a latch line and I have
 only indirect control over the CE lines.
@@ -22,16 +15,30 @@ As a result, I'm using the same pins as the SPI driver, but I'm manually
 producing SPI from this, plus a latch line on CE0.
 
 Pinout (ShiftBrite pin / color --> RPi GPIO):
-Gnd/White --> Ground
-D0/Blue --> GPIO #10 (MOSI)
-L0/Green --> GPIO #8 (CE0)
-E0/Yellow --> Ground
-C0/Black --> GPIO #11 (CLK)
-V+/Red --> Power
+* Gnd/White --> Ground
+* D0/Blue --> GPIO #10 (MOSI)
+* L0/Green --> GPIO #8 (CE0)
+* E0/Yellow --> Ground
+* C0/Black --> GPIO #11 (CLK)
+* V+/Red --> Power
+* GPIO #9 is MISO and is unused.
 
-GPIO #9 is MISO and is unused.
+Note that you may have to run the ShiftBrites from a different power source
+than the Raspberry Pi. I had to use a 9 V supply due to how much the voltage
+sags when the lights are in a long enough chain.
 
-Notes on issues
+Running
+=======
+The Makefile builds a command-line C program called RPi-Shiftbrite which can
+run in a few modes - one to send an image consisting of a constant grey level
+from 0 to 255, another to just send a time-varying test pattern to, and
+another which listens for framebuffer data on stdin encoded as RGBRGBRGB...
+across a scanline.
+
+Use ./RPi-ShiftBrite -h to get information on how to run it. You may have to
+run as root/sudo to have the proper permissions for the GPIO.
+
+Notes on Issues
 ===============
 2012-08-12
 If you start to mix colors, the annoying power/noise issues start
@@ -50,4 +57,8 @@ of all 56 lights. I don't understand this one bit.
 References
 ==========
 http://elinux.org/RPi_Low-level_peripherals
+
+This derives from a few other projects too:
+https://github.com/Hive13/procyon-osc
+https://github.com/Hive13/windowmatrix
 
