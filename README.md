@@ -38,6 +38,12 @@ across a scanline.
 Use ./RPi-ShiftBrite -h to get information on how to run it. You may have to
 run as root/sudo to have the proper permissions for the GPIO.
 
+shiftbrite-demo.py is also present. This calls the command-line C program and
+sends animated images to it. At the moment it just does some sort of sparkly
+demo and happens to peg the CPU quite a bit (probably my fault for doing a
+bunch of this in Python). It needs some work still, but it's a neat demo I
+suppose.
+
 Notes on Issues
 ===============
 2012-08-12
