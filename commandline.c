@@ -11,54 +11,76 @@
 #define BUFSIZE 1024
 #define min(X, Y)  ((X) < (Y) ? (X) : (Y))
 
-typedef enum { STDIN, CYCLE, SOLID } display_mode_t;
+typedef struct {
+    int async;
+    int verbose;
+    int constant_value;
+    int refresh;
+    enum { STDIN, CYCLE, SOLID } mode;
+} listener_options_t;
 
 void print_help(char * name);
-int run_display(int verbose, display_mode_t mode, int constant, int refresh);
+int run_display(listener_options_t * opt);
 
 int main(int argc, char *argv[]) {
-    display_mode_t mode = STDIN;
-    int verbose = 0;
-    int constant_value = -1;
-    int refresh = 10000;
+
     int opt;
 
-    while((opt = getopt(argc, argv, "htc:r:v")) != -1) {
+    listener_options_t options;
+    options.async = 0;
+    options.verbose = 0;
+    options.constant_value = -1;
+    options.refresh = 10000;
+    options.mode = STDIN;
+
+    while((opt = getopt(argc, argv, "htc:r:asvV")) != -1) {
         switch(opt) {
         case 'h':
             print_help(argv[0]);
             return 0;
             break;
+        case 'a':
+            options.async = 1;
+            printf("Async mode on\n");
+            break;
+        case 's':
+            options.async = 0;
+            printf("Sync mode on\n");
+            break;
         case 'v':
-            verbose = 1;
+            options.verbose = 1;
             printf("Verbose output on\n");
             break;
+        case 'V':
+            options.verbose = 2;
+            printf("Really verbose output on\n");
+            break;
         case 't':
-            if (mode != STDIN) {
+            if (options.mode != STDIN) {
                 fprintf(stderr, "Error - Options -t and -c are exclusive\n\n");
                 print_help(argv[0]);
                 return -15;
             }
-            mode = CYCLE;
+            options.mode = CYCLE;
             printf("Printing test pattern\n");
             break;
         case 'c':
-            if (mode != STDIN) {
+            if (options.mode != STDIN) {
                 fprintf(stderr, "Error - Options -t and -c are exclusive\n\n");
                 print_help(argv[0]);
                 return -14;
             }
-            mode = SOLID;
-            constant_value = atoi(optarg);
-            if (constant_value < 0 || constant_value > 255) {
+            options.mode = SOLID;
+            options.constant_value = atoi(optarg);
+            if (options.constant_value < 0 || options.constant_value > 255) {
                 fprintf(stderr, "Error - Level must be value from 0 to 255.\n\n");
                 return -13;            
             }
-            printf("Printing constant value %d\n", constant_value);
+            printf("Printing constant value %d\n", options.constant_value);
             break;
         case 'r':
-            refresh = atoi(optarg);
-            if (refresh < 0) {
+            options.refresh = atoi(optarg);
+            if (options.refresh < 0) {
                 fprintf(stderr, "Error - Refresh time must be positive value.\n\n");
                 return -12;
             }
@@ -76,20 +98,27 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    return run_display(verbose, mode, constant_value, refresh);
+    return run_display(&options);
 }
 
 void print_help(char * name) {
     printf("Usage: %s [-t|-c <val>] [-r <time>] [-v]\n", name);
     printf("  -t: Print a cycling test pattern\n");
     printf("  -c: Print a constant white value, 0-255\n");
-    printf("  -v: Verbosely echo for each frame\n");
+    printf("  -v: Verbose startup; echo character at each frame\n");
+    printf("  -V: Really verbosely echo for each frame\n");
     printf("  -r: Set the refresh period to 'r' microseconds (default 10000)\n");
-    printf("  If neither -t nor -c given, then this listens on stdin for frames.\n");
-    printf("  Note that the delay in -r is only a minimum delay.\n");
+    printf("\n");
+    printf("The following only matter if listening on stdin (i.e. not -t not -c)\n");
+    printf("  -a: Use async mode (push frames whether more are read via stdin or not )\n");
+    printf("  -s: Use sync mode (no frames are pushed until read via stdin)\n");
+    printf("      Note that sync mode ignore refresh period (it becomes tied to stdin)");
+    printf("\n");
+    printf("If neither -t nor -c given, then this listens on stdin for frames.\n");
+    printf("Note that the delay in -r is only a minimum delay.\n");
 }
 
-int run_display(int verbose, display_mode_t mode, int constant, int refresh) { 
+int run_display(listener_options_t * opt) {
     unsigned char buf[BUFSIZE + 1];
 
     // 'x' and 'y' are the size of the screen in pixels. We set them later.
@@ -99,6 +128,11 @@ int run_display(int verbose, display_mode_t mode, int constant, int refresh) {
     unsigned char * img = NULL;
     // 'frame' is the current frame number
     unsigned long int frame = 0;
+
+    // Statistics on underrun/overrun
+    unsigned int frames_display = 0;
+    unsigned int frames_under = 0;
+    unsigned int frames_over = 0;
 
     // 'start' is the time when the display routine began (i.e. frame=0)
     // 'current' us the time for the current frame 
@@ -115,11 +149,11 @@ int run_display(int verbose, display_mode_t mode, int constant, int refresh) {
         fprintf(stderr, "Error - Image buffer is NULL!\n");
         return 2;
     }
-    if (verbose) {
+    if (opt->verbose) {
         printf("Got %dx%d image buffer...\n", x, y);
     }
 
-    if (mode == STDIN) {
+    if (opt->mode == STDIN && opt->async) {
         int flags = fcntl(0, F_GETFL); /* get current file status flags */
         flags |= O_NONBLOCK;      /* turn off blocking flag */
         fcntl(0, F_SETFL, flags);     /* set up non-blocking read */
@@ -131,48 +165,64 @@ int run_display(int verbose, display_mode_t mode, int constant, int refresh) {
     {
         
         // Fill the image.
-        if (mode == CYCLE) {
+        if (opt->mode == CYCLE) {
             int i;
             for(i = 0; i < x * y; ++i) {
                 img[3*i + 0] = (2*frame + i) % 255; // R
                 img[3*i + 1] = (frame + 2*i) % 253; // G
                 img[3*i + 2] = (3*frame + 3*i) % 254; // B
             }
-        } else if (mode == SOLID) {
+        } else if (opt->mode == SOLID) {
             int i;
             for(i = 0; i < 3 * x * y; ++i) {
-                img[i] = constant;
+                img[i] = opt->constant_value;
             }
         } else {
             int r = read(0, buf, BUFSIZE);
             if (r != EAGAIN && r != EWOULDBLOCK && r != -1) {
-                printf("Read %d bytes from stdin\n", r);
+                if (opt->verbose >= 2) {
+                    printf("Read %d bytes from stdin\n", r);
+                }
+                // under = discrepancy between how many bytes we want, and
+                // how many we read
                 int under = x*y*3 - r;
                 if (under > 0) {
-                    printf("Ignoring, need %d more\n", under);
+                    if (opt->verbose >= 2) {
+                        printf("Ignoring, need %d more\n", under);
+                    }
+                    ++frames_under;
                 } else {
                     memcpy(img, buf, x*y*3);
+                    ++frames_display;
                     if (under < 0) {
-                        printf("Ignoring %d extra bytes at end\n", -under);
+                        if (opt->verbose >= 2) {
+                            printf("Ignoring %d extra bytes at end\n", -under);
+                        }
+                        ++frames_over;
                     }
                 }
             }
         }
 
-        if (verbose) {        
-            printf("%ld\n", frame);
+        if (opt->verbose >= 2) {
+            printf("Frame %ld\n", frame);
             if (frame > 0 && frame % 1000 == 0) {
                 gettimeofday(&current, NULL);
                 double rate = (double) frame / difftime(current.tv_sec, start.tv_sec); 
                 //printf("dt=%f\n", difftime(current.tv_sec, start.tv_sec));
                 //printf("Averaging %f frames/second.\n");
             }
+        } else if (frame % 200 == 0 && frame > 0 && opt->verbose && opt->mode == STDIN) {
+            printf("Frames refr/recv/short/miss: %u/%u/%u/%u\n", frame, frames_display, frames_under, frames_over);
         }
 
         // Finally, actually push the image out.
         shiftbrite_refresh();
-        
-        usleep(refresh);
+       
+        // If we're in sync mode, don't delay. 
+        if (opt->mode == STDIN && opt->async) {
+            usleep(opt->refresh);
+        }
         ++frame;
     }
 

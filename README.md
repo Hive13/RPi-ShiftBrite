@@ -38,11 +38,20 @@ across a scanline.
 Use ./RPi-ShiftBrite -h to get information on how to run it. You may have to
 run as root/sudo to have the proper permissions for the GPIO.
 
+The program (when acting as a listener) can run in either sync or async mode.
+In async mode, the program pushes out a frame over SPI at a fairly constant
+rate (the -r option specifies this). It updates its internal framebuffer
+whenever new input is available on stdin; it does a non-blocking read at
+every refresh. If you need to refresh your ShiftBrites at one framerate, but
+are generating data at a lesser framerate, you may need this mode. If you
+are passing in data too fast, the listener will take the first frame and drop
+the rest.
+In sync mode, the program pushes out a frame over SPI as it receives it over
+stdin. Refreshing the ShiftBrites thus waits until a frame is received.
+
 shiftbrite-demo.py is also present. This calls the command-line C program and
 sends animated images to it. At the moment it just does some sort of sparkly
-demo and happens to peg the CPU quite a bit (probably my fault for doing a
-bunch of this in Python). It needs some work still, but it's a neat demo I
-suppose.
+demo and this seems to work okay up to 400-500 fps (whatever point that has).
 
 Notes on Issues
 ===============
