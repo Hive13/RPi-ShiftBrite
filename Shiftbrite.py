@@ -1,19 +1,15 @@
 #!/usr/bin/env python
 
-import sys
 import subprocess
-import time
-import os
 import random
 import math
 import numpy
 
-from framebuffer import Framebuffer
-
 # This is intended to be subclassed.
 # Modify self.framebuffer freely, then call refresh().
 class Display:
-    def __init__(self, width, height):
+    def __init__(self, name, width, height):
+        self.name = name
         self.width = width
         self.height = height
         self.framebuffer = numpy.zeros( (width, height, 3) )
@@ -26,13 +22,16 @@ class Display:
     def close(self):
         pass
 
+# TODO list:
+# (1) Break out the commandline options here as parameters, particularly,
+# async.
 class ShiftbriteDisplay(Display):
     """Set up a Display for the ShiftBrite (presumably using the RPi-ShiftBrite).
     Calling close() is rather necessary here. If the Python interpreter quits from
     an exception, the listener will keep running otherwise."""
     command = ["./RPi-ShiftBrite", "-s", "-v", "-r 0"]
-    def __init__(self, width, height, command = None):
-        Display.__init__(self, width, height)
+    def __init__(self, name, width, height, command = None):
+        Display.__init__(self, name, width, height)
         self.command = command
         if (self.command == None):
             self.command = ShiftbriteDisplay.command
@@ -87,26 +86,3 @@ class ShimmeryDemo:
             fb[:] = fb + (numpy.random.rand(*fb.shape) * a + b)
         self.display.refresh()
 
-def main(argv):
-    disp = ShiftbriteDisplay(7, 8)
-    print("Python client initialized!")
-    try:
-        frame = 0
-        # approximate framerate (minus overhead)
-        framerate = 400
-        demo = ShimmeryDemo(disp)
-        # These are all framerate-dependent to scale with it and make the whole
-        # effect itself framerate-independent.
-        demo.setParams(80.0 / framerate, 0.1 / framerate, 340.0 / framerate, 100.0 / framerate)
-        frame_delay = 1.0 / framerate
-        while True:
-            demo.updateFrame()
-            time.sleep(frame_delay)
-    except Exception as ex:
-        print("Caught exception.")
-        raise
-    finally:
-        print("Killing listener!")
-        disp.close()
-
-main(sys.argv)
