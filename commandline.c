@@ -8,15 +8,37 @@
 #include <errno.h>
 #include <sys/time.h>
 
+// BUFSIZE: How much input is read at once from stdin. This really should be
+// set some more sane way, like the size of the display.
 #define BUFSIZE 1024
 #define min(X, Y)  ((X) < (Y) ? (X) : (Y))
 
+// This structure is passed into the listener to specify how it should run.
 typedef struct {
-    int async;
-    int verbose;
-    int constant_value;
-    int refresh;
+    /* mode: Display mode.
+    If STDIN, the listener displays the frames that are given via stdin as
+    RGBRGBRGB... scanlines, every 3 characters giving a 24-bit RGB triplet.
+    If CYCLE, the listener displays a cycling pattern mostly for testing.
+    If SOLID, the listener displays a solid grey image of level
+    'constant_value'. */
     enum { STDIN, CYCLE, SOLID } mode;
+    /* refresh: Refresh cycle delay, in microseconds.
+    This is the time, in microseconds, to delay between refreshing the display
+    (i.e. pushing a frame out over SPI). If mode=STDIN, then this delay only
+    applies for async mode. */
+    int refresh;
+    /* async: Asynchronous mode. (Only matters for mode=STDIN)
+    If nonzero, then it should refresh asynchronously, i.e. it will delay for
+    'refresh' microseconds and then refresh the display, whether a new frame
+    is waiting on stdin or not. If this is zero, then the listener refreshes
+    the display only when it has read input from stdin. */
+    int async;
+    /* verbose: Verbosity level, currently, 0, 1, or 2. 
+    Still in the process of being refined. */
+    int verbose;
+    /* constant_value: The constant gray level (0-255) that will be sent to
+    the display. This only matters if mode=SOLID. */
+    int constant_value;
 } listener_options_t;
 
 void print_help(char * name);
@@ -154,9 +176,9 @@ int run_display(listener_options_t * opt) {
     }
 
     if (opt->mode == STDIN && opt->async) {
-        int flags = fcntl(0, F_GETFL); /* get current file status flags */
-        flags |= O_NONBLOCK;      /* turn off blocking flag */
-        fcntl(0, F_SETFL, flags);     /* set up non-blocking read */
+        // If we need async mode, then set up stdin for non-blocking reads.
+        int flags = fcntl(0, F_GETFL);
+        fcntl(0, F_SETFL, flags | O_NONBLOCK);
     }
 
     gettimeofday(&start, NULL);
@@ -216,7 +238,7 @@ int run_display(listener_options_t * opt) {
             printf("Frames refr/recv/short/miss: %u/%u/%u/%u\n", frame, frames_display, frames_under, frames_over);
         }
 
-        // Finally, actually push the image out.
+        // Finally, actually push the image out to the ShiftBrite.
         shiftbrite_refresh();
        
         // If we're in sync mode, don't delay. 

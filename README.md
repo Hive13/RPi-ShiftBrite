@@ -27,6 +27,13 @@ Note that you may have to run the ShiftBrites from a different power source
 than the Raspberry Pi. I had to use a 9 V supply due to how much the voltage
 sags when the lights are in a long enough chain.
 
+The code makes some assumptions on the orientation of the ShiftBrites; the
+setup on which I've been testing has them going in a zigzag, starting at the
+top-left pixel and going down 8 pixels, then moving over a row and going up
+8, and so on until it forms 7 rows. See shiftbrite.c, particularly the
+function shiftbrite_push_image and its variables rowDir, colDir, and rotate90,
+if your own setup varies from this.
+
 Running
 =======
 The Makefile builds a command-line C program called RPi-Shiftbrite which can
@@ -36,7 +43,8 @@ another which listens for framebuffer data on stdin encoded as RGBRGBRGB...
 across a scanline.
 
 Use ./RPi-ShiftBrite -h to get information on how to run it. You may have to
-run as root/sudo to have the proper permissions for the GPIO.
+run as root or with sudo to have the proper permissions for the GPIO, as it
+accesses /dev/mem.
 
 The program (when acting as a listener) can run in either sync or async mode.
 In async mode, the program pushes out a frame over SPI at a fairly constant
@@ -49,25 +57,23 @@ the rest.
 In sync mode, the program pushes out a frame over SPI as it receives it over
 stdin. Refreshing the ShiftBrites thus waits until a frame is received.
 
+In both cases, the frames are read as RGBRGBRGB..., every 3 characters giving
+one pixel as a 24-bit RGB triplet, going across a scanline and then down the 
+image. Frames too short are ignored; frames too long are truncated.
+
 shiftbrite-demo.py is also present. This calls the command-line C program and
 sends animated images to it. At the moment it just does some sort of sparkly
 demo and this seems to work okay up to 400-500 fps (whatever point that has).
 
 Notes on Issues
 ===============
-2012-08-12
-If you start to mix colors, the annoying power/noise issues start
-popping up yet again, even on a chain of only 8. I checked the voltage at the
-end of the chain (I'm running it from a 9V supply) and it has not sagged
-enough to matter.
-G + B is okay.
-R + B is okay.
-R + G is okay.
-Combining everything (i.e. white) is where issues start to come in.
-Yet if I refresh constantly, it only seems to take the form of occasional
-flickering.
-This issue, perplexingly, _improved_ when I hooked up the board to the chain
-of all 56 lights. I don't understand this one bit.
+The only issue I've noted so far is that the end of the chain - even if I am
+testing only on 7 or 8 lights - has some issues. They do not seem to be power
+issues, as last time, because once the ShiftBrite module has received the
+command, the color is stable (whereas insufficient supply voltage causes the
+board to flicker and all boards downstream to have issues). They only seem 
+to display this behavior when brighter (say, near full white) colors are
+displayed. For most images, this issue seems nonexistent.
 
 References
 ==========
