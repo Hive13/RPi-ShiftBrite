@@ -61,9 +61,17 @@ In both cases, the frames are read as RGBRGBRGB..., every 3 characters giving
 one pixel as a 24-bit RGB triplet, going across a scanline and then down the 
 image. Frames too short are ignored; frames too long are truncated.
 
-shiftbrite-demo.py is also present. This calls the command-line C program and
-sends animated images to it. At the moment it just does some sort of sparkly
-demo and this seems to work okay up to 400-500 fps (whatever point that has).
+Demo.py is also present. This calls the command-line C program and sends
+animated images to it. At the moment it just does some sort of sparkly demo
+and this seems to work okay up to 400-500 fps (whatever point that has).
+
+HTTP.py runs it not as a standalone demo, but as an HTTP server. It now
+handles PUT requests at URLs like:
+http://192.168.1.182:8080/display/0?x=2&y=2&r=255&g=255&b=255
+x and y are the X and Y coordinates in pixels, starting from zero.
+r, g, and b give the RGB to set the given pixel to (range is 0-255).
+Yes, it's unconventional that the parameter string gives the data, but I did
+not feel like putting the color data in the payload.
 
 Notes on Issues
 ===============
