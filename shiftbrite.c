@@ -1,5 +1,6 @@
 #include "shiftbrite.h"
 #include <bcm2835.h>
+#include <stdio.h>
 
 #define RPI_SPI_MOSI RPI_GPIO_P1_19 // GPIO 10
 #define RPI_SPI_MISO RPI_GPIO_P1_21 // GPIO 9
@@ -146,5 +147,21 @@ void shiftbrite_dot_correct(int lights) {
         shiftbrite_command(1, correct_r, correct_g, correct_b);
     }
     shiftbrite_delay_latch(lights);
+}
+
+// Print a hex dump of 'bytes' bytes going into the buffer 't'. Note that this
+// has no protection whatsoever if that buffer is shorter than the size given!
+// It will print 16 bytes per line.
+void printHexDump(char * t, int bytes)
+{
+    int i;
+    for(i = 0; i < bytes; ++i) {
+        printf("%02x ", t[i]);
+        // 1 space, 2 spaces, & newline every 4, 8, & 16 bytes.
+        if (!((i + 1) % 4))  printf(" ");
+        if (!((i + 1) % 8))  printf("  ");
+        if (!((i + 1) % 16)) printf("\n");
+    }
+    if (bytes % 16) printf("\n");
 }
 

@@ -238,6 +238,8 @@ int run_display(listener_options_t * opt) {
             printf("Frames refr/recv/short/miss: %u/%u/%u/%u\n", frame, frames_display, frames_under, frames_over);
         }
 
+        //printHexDump(img, x*y*3);
+
         // Finally, actually push the image out to the ShiftBrite.
         shiftbrite_refresh();
        

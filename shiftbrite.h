@@ -58,4 +58,6 @@ void shiftbrite_dot_correct(int lights);
 // command given 'lights' ShiftBrites in a chain, and then latch.
 void shiftbrite_delay_latch(int lights);
 
+void printHexDump(char * t, int bytes);
+
 #endif

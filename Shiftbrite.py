@@ -48,6 +48,45 @@ class ShiftbriteDisplay(Display):
         Display.refresh(self)
         self.subproc.terminate()
 
+
+class TraceDemo:
+    def __init__(self, display):
+        self.display = display
+        self.width = display.width
+        self.height = display.height
+        self.frame = 0
+    def updateFrame(self):
+        x = self.frame % self.width
+        y = (self.frame / self.width) % self.height
+        self.display.framebuffer[:] = 0
+        self.display.framebuffer[x,y,:] = 255
+        self.frame += 1
+        self.display.refresh()
+
+class StarfieldDemo:
+    def __init__(self, display):
+        self.display = display
+        self.width = display.width
+        self.height = display.height
+    def setParams(self, threshold):
+        self.threshold = threshold
+    def shiftFrame(self):
+        fb = self.display.framebuffer
+        #fb[1:,:,:] = fb[:-1,:,:]
+        fb[:,1:,:] = fb[:,:-1,:]
+    def updateFrame(self):
+        self.shiftFrame()
+        sample = random.random()
+        fb = self.display.framebuffer
+        #fb[0,:,0] = (numpy.random.rand(fb.shape[1]) > self.threshold)*255
+        #fb[0,:,1] = fb[0,:,0]
+        #fb[0,:,2] = fb[0,:,0]]
+        sample = numpy.random.rand(fb.shape[0])
+        fb[:,0,0] = (sample > self.threshold)*255
+        fb[:,1,1] = fb[:,1,0]
+        fb[:,2,2] = fb[:,2,0]
+        self.display.refresh()
+
 class ShimmeryDemo:
     def __init__(self, display):
         self.display = display
