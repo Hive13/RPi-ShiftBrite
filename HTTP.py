@@ -47,9 +47,9 @@ class HttpListener:
             r = int(bottle.request.query.r)
             g = int(bottle.request.query.g)
             b = int(bottle.request.query.b)
-            display.framebuffer[xcoord, ycoord, 0] = r
-            display.framebuffer[xcoord, ycoord, 1] = g
-            display.framebuffer[xcoord, ycoord, 2] = b
+            display.framebuffer[ycoord, xcoord, 0] = r
+            display.framebuffer[ycoord, xcoord, 1] = g
+            display.framebuffer[ycoord, xcoord, 2] = b
             print("(%d,%d) -> RGB(%d,%d,%d)" % (xcoord, ycoord, r, g, b))
             display.refresh()
             return 'OK'
@@ -62,7 +62,7 @@ class HttpListener:
             print("Caught exception.")
             raise
         finally:
-            close()
+            self.close()
 
     def close(self):
         [d.close for d in self.displays]

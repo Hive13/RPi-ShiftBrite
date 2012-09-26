@@ -8,11 +8,12 @@ import time
 import Shiftbrite as SB
 
 def main(argv):
-    disp = SB.ShiftbriteDisplay("Hive13 Raspberry Pi ShiftBrite", 8, 7)
+    disp = SB.ShiftbriteDisplay("Hive13 Raspberry Pi ShiftBrite", 7, 8)
     try:
         frame = 0
         # approximate framerate (minus overhead)
-        framerate = 20
+        framerate = 5
+        #demo = SB.TraceDemo(disp)
         demo = SB.StarfieldDemo(disp)
         demo.setParams(0.8)
         #demo = SB.ShimmeryDemo(disp)

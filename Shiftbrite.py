@@ -12,7 +12,7 @@ class Display:
         self.name = name
         self.width = width
         self.height = height
-        self.framebuffer = numpy.zeros( (width, height, 3) )
+        self.framebuffer = numpy.zeros( (height, width, 3) )
         self._fb_bytes = numpy.zeros(self.framebuffer.shape, dtype='uint8' )
     def getSize(self):
         return (self.width, self.height)
@@ -59,7 +59,11 @@ class TraceDemo:
         x = self.frame % self.width
         y = (self.frame / self.width) % self.height
         self.display.framebuffer[:] = 0
-        self.display.framebuffer[x,y,:] = 255
+        self.display.framebuffer[y,x,:] = 255
+        if (x == 0):
+            self.display.framebuffer[y,x,0] = 0
+        if (y == 0):
+            self.display.framebuffer[y,x,1] = 0
         self.frame += 1
         self.display.refresh()
 
