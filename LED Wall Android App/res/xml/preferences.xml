@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <EditTextPreference
+        android:key="org.hive13.wall.HostnameKey"
+        android:title="Hostname setup"
+        android:summary="Enter hostname or IP address of LED wall."
+        android:dialogTitle="Enter hostname or IP address of LED wall"
+        /> 
+        
+    <EditTextPreference
+        android:key="org.hive13.wall.PortKey"
+        android:title="Port number"
+        android:summary="Enter port number of LED wall."
+        android:dialogTitle="Enter port number of LED wall."
+        android:defaultValue="8080"
+        /> 
+
+</PreferenceScreen>
