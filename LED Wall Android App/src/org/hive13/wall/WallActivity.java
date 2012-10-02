@@ -17,7 +17,6 @@ import android.content.SharedPreferences;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.GridView;
 import android.widget.TextView;
 
 public class WallActivity extends Activity {
@@ -38,6 +37,7 @@ public class WallActivity extends Activity {
     public void onResume() {
         super.onResume();
         
+        // TODO: Move this ID into preferences.
         int id = 0;
         
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
@@ -53,7 +53,7 @@ public class WallActivity extends Activity {
 		try {
 			URL dest = new URL("http://" + hostname + ":" + port + "/display/specs/" + id);
 	        progressView.setText("Trying to connect...");
-			new GetInfoTask().execute(dest);
+			new HttpTask(HttpOperation.GET_SPECS).execute(dest);
 		} catch (MalformedURLException e) {
 			progressView.setText("Error with URL!");
 			Log.e(TAG, "Error making URL: " + e.getMessage());
@@ -73,6 +73,9 @@ public class WallActivity extends Activity {
 			Intent intent = new Intent(this, SetupActivity.class);
 			startActivity(intent);
 			break;
+		case R.id.menu_clearwall:
+			
+			break;
 		default:
 			break;
 		}
@@ -83,11 +86,33 @@ public class WallActivity extends Activity {
     	
         GridEditor wall = (GridEditor) findViewById(R.id.gridEditor);
         wall.setGridSize(width,  height);
+ 
+        int id = 0;
+        // TODO: Factor these out (they're repeated)
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        String hostname = sharedPref.getString(SetupActivity.KEY_PREF_HOSTNAME, "");
+        String port = sharedPref.getString(SetupActivity.KEY_PREF_PORT, "");
         
+		URL dest;
+		try {
+			dest = new URL("http://" + hostname + ":" + port + "/display/" + id);
+			new HttpTask(HttpOperation.GET_FRAMEBUFFER).execute(dest);
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
     }
 
-	private class GetInfoTask extends AsyncTask<URL, Integer, String> {
-		private boolean error = false;
+    private enum HttpOperation { GET_SPECS, GET_FRAMEBUFFER, UPDATE_PIXEL, ERROR };
+    
+	private class HttpTask extends AsyncTask<URL, Integer, String> {
+		
+		private HttpOperation op;
+		
+		public HttpTask(HttpOperation op) {
+			this.op = op;
+		}
 		
 		@Override
 		protected String doInBackground(URL... urls) {
@@ -100,27 +125,49 @@ public class WallActivity extends Activity {
 				BufferedReader rd = new BufferedReader(isr);
 				result = rd.readLine();
 			} catch (IOException e) {
-				error = true;
+				op = HttpOperation.ERROR;
 				result = e.getMessage();
 			}
 			return result;
 		}
 
+		@Override
 		protected void onPostExecute(String result) {
 	        TextView progressView = (TextView) findViewById(R.id.progressView);
 	        
-			if (error) {
+	        switch(op) {
+	        case ERROR:
 				progressView.setText("Error: " + result);
-			} else {
-				String reply[] = result.split(";");
-				width = Integer.parseInt(reply[0]);
-				height = Integer.parseInt(reply[1]);
-				name = reply[2];
-				progressView.setText("Found '" + name + "', " + width + "x" + height + " display");
-				setupGrid();
-			}
+	        	break;
+	        case GET_SPECS:
+	        	{
+	        		String reply[] = result.split(";");
+					width = Integer.parseInt(reply[0]);
+					height = Integer.parseInt(reply[1]);
+					name = reply[2];
+					progressView.setText("Found '" + name + "', " + width + "x" + height + " display");
+					setupGrid();
+	        	}
+				break;
+	        case GET_FRAMEBUFFER:
+		        {
+			        GridEditor wall = (GridEditor) findViewById(R.id.gridEditor);
+	        		String reply[] = result.split(";");
+	        		final int width = wall.getGridWidth();
+	        		for (int i = 0; i < reply.length / 3; ++i) {
+	        			int r = Integer.parseInt(reply[3*i + 0]);
+	        			int g = Integer.parseInt(reply[3*i + 1]);
+	        			int b = Integer.parseInt(reply[3*i + 2]);
+	        			wall.setPixel(i % width, i / width, r, g, b);
+	        		}
+	        		wall.invalidate();
+		        }
+	        	break;
+	        case UPDATE_PIXEL:
+	        	// TODO: Look for 'OK'?
+	        	break;
+	        }
 		}
-
 	}
 }
 
