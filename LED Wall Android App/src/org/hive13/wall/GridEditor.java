@@ -32,6 +32,8 @@ implements View.OnTouchListener {
 	
 	Paint display[][] = null;
 	
+	WallActivity parentWall = null;
+	
 
 	@Override
 	protected void onDraw(Canvas canvas) {
@@ -51,6 +53,10 @@ implements View.OnTouchListener {
 		}
 		
 	}
+	
+	public void setParentWall(WallActivity activity) {
+		parentWall = activity;
+	}
 
     public boolean onTouch(View v, MotionEvent event) {
         
@@ -58,14 +64,24 @@ implements View.OnTouchListener {
      
         float dx = v.getWidth() / (float) width;
         float dy = v.getHeight() / (float) height;
-        display[(int) (point[0] / dx)][(int) (point[1] / dy)].setARGB(255, 255, 255, 255);
+        int x = (int) (point[0] / dx);
+        int y = (int) (point[1] / dy);
+        int r = 255;
+        int g = 255;
+        int b = 255;
+        display[x][y].setARGB(255, r, g, b);
         Log.i(TAG, "" + point[0] + ","  + point[1]);
         v.invalidate();
+        
+        if (parentWall != null) {
+        	parentWall.onPress(x, y, r, g, b);
+        } else {
+	        Log.e(TAG, "No WallActivity has been set!");
+        }
         
         return true;
     }
     
-	
 	public void setGridSize(int width, int height) {
 		this.width = width;
 		this.height = height;

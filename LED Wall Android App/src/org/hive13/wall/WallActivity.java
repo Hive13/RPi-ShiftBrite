@@ -1,14 +1,9 @@
 package org.hive13.wall;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLConnection;
+import org.hive13.wall.WallCommunication.HttpOperation;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.app.Activity;
@@ -19,12 +14,16 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
-public class WallActivity extends Activity {
+public class WallActivity extends Activity
+//implements OnSharedPreferenceChangeListener
+{
 	final static String TAG = WallActivity.class.getSimpleName();
 	
-	int width = -1;
-	int height = -1;
-	String name = "";
+	WallCommunication comm = null;
+	
+	private int width = -1;
+	private int height = -1;
+	private String name = "";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -50,10 +49,14 @@ public class WallActivity extends Activity {
         TextView progressView = (TextView) findViewById(R.id.progressView);
         progressView.setVisibility(TextView.VISIBLE);
         
+        GridEditor wall = (GridEditor) findViewById(R.id.gridEditor);
+        wall.setParentWall(this);
+        
 		try {
-			URL dest = new URL("http://" + hostname + ":" + port + "/display/specs/" + id);
+			URL dest = new URL("http://" + hostname + ":" + port + "/display/");
 	        progressView.setText("Trying to connect...");
-			new HttpTask(HttpOperation.GET_SPECS).execute(dest);
+	        comm = new WallCommunication(this, dest);
+	        comm.startAsyncOp(HttpOperation.GET_SPECS);
 		} catch (MalformedURLException e) {
 			progressView.setText("Error with URL!");
 			Log.e(TAG, "Error making URL: " + e.getMessage());
@@ -74,7 +77,16 @@ public class WallActivity extends Activity {
 			startActivity(intent);
 			break;
 		case R.id.menu_clearwall:
-			
+	        try {
+		        GridEditor wall = (GridEditor) findViewById(R.id.gridEditor);
+				comm.startAsyncOp(HttpOperation.CLEAR_DISPLAY);
+		        wall.clearGrid();
+			} catch (MalformedURLException e) {
+				Log.e(TAG, "Cannot form URL: " + e.getMessage());
+			}
+			break;
+		case R.id.menu_refresh:
+			refreshPreview();
 			break;
 		default:
 			break;
@@ -82,92 +94,64 @@ public class WallActivity extends Activity {
 		return super.onOptionsItemSelected(item);	
     }
     
-    private void setupGrid() {
+    public GridEditor setupGrid(int width, int height) {
+
+    	this.width = width;
+    	this.height = height;
     	
         GridEditor wall = (GridEditor) findViewById(R.id.gridEditor);
         wall.setGridSize(width,  height);
  
-        int id = 0;
-        // TODO: Factor these out (they're repeated)
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-        String hostname = sharedPref.getString(SetupActivity.KEY_PREF_HOSTNAME, "");
-        String port = sharedPref.getString(SetupActivity.KEY_PREF_PORT, "");
+        refreshPreview();
         
-		URL dest;
-		try {
-			dest = new URL("http://" + hostname + ":" + port + "/display/" + id);
-			new HttpTask(HttpOperation.GET_FRAMEBUFFER).execute(dest);
-		} catch (MalformedURLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
+		return wall;
     }
-
-    private enum HttpOperation { GET_SPECS, GET_FRAMEBUFFER, UPDATE_PIXEL, ERROR };
     
-	private class HttpTask extends AsyncTask<URL, Integer, String> {
-		
-		private HttpOperation op;
-		
-		public HttpTask(HttpOperation op) {
-			this.op = op;
-		}
-		
-		@Override
-		protected String doInBackground(URL... urls) {
-			URLConnection conn;
-			String result = null;
-			try {
-				conn = urls[0].openConnection();
-				InputStream is = conn.getInputStream();
-				InputStreamReader isr = new InputStreamReader(is);
-				BufferedReader rd = new BufferedReader(isr);
-				result = rd.readLine();
-			} catch (IOException e) {
-				op = HttpOperation.ERROR;
-				result = e.getMessage();
-			}
-			return result;
+    public void setProgressText(String text) {
+        TextView progressView = (TextView) findViewById(R.id.progressView);
+        progressView.setVisibility(TextView.VISIBLE);
+        progressView.setText(text);
+    }
+    
+    public void refreshPreview() {
+        
+        if (comm == null) {
+        	Log.e(TAG, "WallCommunication was never initialized!");
+        	return;
+        }
+        
+		try {
+			comm.startAsyncOp(HttpOperation.GET_FRAMEBUFFER);
+		} catch (MalformedURLException e) {
+			Log.e(TAG, "Error refreshing: " + e.getMessage());
 		}
 
-		@Override
-		protected void onPostExecute(String result) {
-	        TextView progressView = (TextView) findViewById(R.id.progressView);
-	        
-	        switch(op) {
-	        case ERROR:
-				progressView.setText("Error: " + result);
-	        	break;
-	        case GET_SPECS:
-	        	{
-	        		String reply[] = result.split(";");
-					width = Integer.parseInt(reply[0]);
-					height = Integer.parseInt(reply[1]);
-					name = reply[2];
-					progressView.setText("Found '" + name + "', " + width + "x" + height + " display");
-					setupGrid();
-	        	}
-				break;
-	        case GET_FRAMEBUFFER:
-		        {
-			        GridEditor wall = (GridEditor) findViewById(R.id.gridEditor);
-	        		String reply[] = result.split(";");
-	        		final int width = wall.getGridWidth();
-	        		for (int i = 0; i < reply.length / 3; ++i) {
-	        			int r = Integer.parseInt(reply[3*i + 0]);
-	        			int g = Integer.parseInt(reply[3*i + 1]);
-	        			int b = Integer.parseInt(reply[3*i + 2]);
-	        			wall.setPixel(i % width, i / width, r, g, b);
-	        		}
-	        		wall.invalidate();
-		        }
-	        	break;
-	        case UPDATE_PIXEL:
-	        	// TODO: Look for 'OK'?
-	        	break;
-	        }
+    }
+    
+    public void onPress(int x, int y, int r, int g, int b) {
+    	 
+        if (comm == null) {
+        	Log.e(TAG, "WallCommunication was never initialized!");
+        	return;
+        }
+        
+		try {
+			String param = String.format("?x=%d&y=%d&r=%d&g=%d&b=%d", x, y, r, g, b);
+			comm.startAsyncOp(HttpOperation.UPDATE_PIXEL, param);
+		} catch (MalformedURLException e) {
+			Log.e(TAG, "Error updating: " + e.getMessage());
 		}
-	}
+
+    }
+    
+    /*
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (key.equals(SetupActivity.KEY_PREF_HOSTNAME)) {
+            sharedPreferences.getString(key, "");
+        } else if (key.equals(SetupActivity.KEY_PREF_PORT)) {
+            sharedPreferences.getString(key, "");
+        }
+    }
+    */	
 }
 

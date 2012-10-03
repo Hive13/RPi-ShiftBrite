@@ -5,5 +5,6 @@
     <string name="menu_settings">Settings</string>
     <string name="title_activity_wall">LED Wall</string>
     <string name="menu_clearwall">Clear Display</string>
+    <string name="menu_refresh">Refresh</string>
 
 </resources>
