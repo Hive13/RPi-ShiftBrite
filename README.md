@@ -2,9 +2,12 @@ RPi-ShiftBrite
 ==============
 
 The aim of this project is to control ShiftBrite LEDs using the Raspberry Pi
-board.
+board, and make this accessible via an HTTP REST interface.
 
 This requires the bcm2835 library: http://www.open.com.au/mikem/bcm2835/
+
+An Android app is also included which talks to this HTTP interface; it is
+currently very experimental.
 
 Technical Details
 =================
@@ -70,18 +73,28 @@ handles PUT requests at URLs like:
 http://192.168.1.182:8080/display/0?x=2&y=2&r=255&g=255&b=255
 x and y are the X and Y coordinates in pixels, starting from zero.
 r, g, and b give the RGB to set the given pixel to (range is 0-255).
-Yes, it's unconventional that the parameter string gives the data, but I did
-not feel like putting the color data in the payload.
 
 Notes on Issues
 ===============
-The only issue I've noted so far is that the end of the chain - even if I am
-testing only on 7 or 8 lights - has some issues. They do not seem to be power
-issues, as last time, because once the ShiftBrite module has received the
-command, the color is stable (whereas insufficient supply voltage causes the
-board to flicker and all boards downstream to have issues). They only seem 
-to display this behavior when brighter (say, near full white) colors are
-displayed. For most images, this issue seems nonexistent.
+The Android app is still quite experimental and could use some bug fixes.
+It does each HTTP request in its own AsyncTask and (given that this is
+thread-pooled) this is rather slow. On top of this, dragging across the
+screen (to set an entire path of pixels, for instance) sometimes causes
+crashes.
+
+HTTP.py does not refresh the display until a new image is received. This
+matters in environments like where the test display is currently running,
+in which turning the room lights on upsets the power just enough to cause
+glitches in the ShiftBrites. This could be remedied by running the listener
+in async mode, probably.
+
+On the hardware, the only issue I've noted so far is that the end of the
+chain - even if I am testing only on 7 or 8 lights - has some issues. They do
+not seem to be power issues, as last time, because once the ShiftBrite module
+has received the command, the color is stable (whereas insufficient supply
+voltage causes the board to flicker and all boards downstream to have issues).
+They only seem to display this behavior when brighter (say, near full white)
+colors are displayed. For most images, this issue seems nonexistent.
 
 References
 ==========
