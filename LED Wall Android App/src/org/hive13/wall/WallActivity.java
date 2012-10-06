@@ -2,7 +2,6 @@ package org.hive13.wall;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import org.hive13.wall.WallCommunication.HttpOperation;
 
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -55,8 +54,10 @@ public class WallActivity extends Activity
 		try {
 			URL dest = new URL("http://" + hostname + ":" + port + "/display/");
 	        progressView.setText("Trying to connect...");
-	        comm = new WallCommunication(this, dest);
-	        comm.startAsyncOp(HttpOperation.GET_SPECS);
+	        comm = new WallCommunication(this, dest, id);
+	        comm.getDisplaySpecs();
+	        
+	        comm.startUpdates();
 		} catch (MalformedURLException e) {
 			progressView.setText("Error with URL!");
 			Log.e(TAG, "Error making URL: " + e.getMessage());
@@ -79,8 +80,7 @@ public class WallActivity extends Activity
 		case R.id.menu_clearwall:
 	        try {
 		        GridEditor wall = (GridEditor) findViewById(R.id.gridEditor);
-				comm.startAsyncOp(HttpOperation.CLEAR_DISPLAY);
-		        wall.clearGrid();
+		        comm.clearDisplay();
 			} catch (MalformedURLException e) {
 				Log.e(TAG, "Cannot form URL: " + e.getMessage());
 			}
@@ -121,7 +121,7 @@ public class WallActivity extends Activity
         }
         
 		try {
-			comm.startAsyncOp(HttpOperation.GET_FRAMEBUFFER);
+			comm.getDisplayState();
 		} catch (MalformedURLException e) {
 			Log.e(TAG, "Error refreshing: " + e.getMessage());
 		}
@@ -135,13 +135,7 @@ public class WallActivity extends Activity
         	return;
         }
         
-		try {
-			String param = String.format("?x=%d&y=%d&r=%d&g=%d&b=%d", x, y, r, g, b);
-			comm.startAsyncOp(HttpOperation.UPDATE_PIXEL, param);
-		} catch (MalformedURLException e) {
-			Log.e(TAG, "Error updating: " + e.getMessage());
-		}
-
+		comm.queueUpdate(new PixelCoordinate(x, y), new RGBColor(r, g, b));
     }
     
     /*

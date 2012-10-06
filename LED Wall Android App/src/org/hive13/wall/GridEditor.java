@@ -1,7 +1,12 @@
 package org.hive13.wall;
 
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
+
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -34,7 +39,6 @@ implements View.OnTouchListener {
 	
 	WallActivity parentWall = null;
 	
-
 	@Override
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
@@ -60,25 +64,30 @@ implements View.OnTouchListener {
 
     public boolean onTouch(View v, MotionEvent event) {
         
+    	if (parentWall == null) {
+	        Log.e(TAG, "No WallActivity has been set!");
+    		return false;
+    	}
+    	
+    	float p = event.getPressure();
+    	p = p < 0 ? 0 : (p > 1 ? 1 : p);
+    	int level = (int) (255 * p);
+    	
         float point[] = new float[] { event.getX(), event.getY() };
      
         float dx = v.getWidth() / (float) width;
         float dy = v.getHeight() / (float) height;
         int x = (int) (point[0] / dx);
         int y = (int) (point[1] / dy);
-        int r = 255;
-        int g = 255;
-        int b = 255;
+   
+        int r = level;
+        int g = level;
+        int b = level;
         display[x][y].setARGB(255, r, g, b);
         Log.i(TAG, "" + point[0] + ","  + point[1]);
         v.invalidate();
-        
-        if (parentWall != null) {
-        	parentWall.onPress(x, y, r, g, b);
-        } else {
-	        Log.e(TAG, "No WallActivity has been set!");
-        }
-        
+    	parentWall.onPress(x, y, r, g, b);
+    
         return true;
     }
     
