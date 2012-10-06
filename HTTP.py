@@ -74,22 +74,44 @@ class HttpListener:
         def index(displayIdStr=None):
             """PUT to /display/<display ID> - Modify a pixel at a given location.
             GET to /display/update/<display ID> - Likewise
+            You have two ways to accomplish this: with a parameter string, or
+            with the HTTP body.
             Parameter string can have:
             x, y - X and Y pixel location (numbered starting from zero)
-            r, g, b - R, G, and B pixel values (integers from 0 to 255)"""
+            r, g, b - R, G, and B pixel values (integers from 0 to 255)
+            If using the HTTP body, give, one update per line:
+            x;y;r;g;b
+            Follow the same conventions as with the parameter string."""
             (display, dispId) = self.getDisplay(displayIdStr)
-            xcoord = int(bottle.request.query.x)
-            ycoord = int(bottle.request.query.y)
-            if (xcoord < 0 or xcoord >= display.width or ycoord < 0 or ycoord >= display.height):
-                print("Coordinate (%d,%d) out of range!" % (xcoord, ycoord))
-                return bottle.HTTPError
-            r = int(bottle.request.query.r)
-            g = int(bottle.request.query.g)
-            b = int(bottle.request.query.b)
-            display.framebuffer[ycoord, xcoord, 0] = r
-            display.framebuffer[ycoord, xcoord, 1] = g
-            display.framebuffer[ycoord, xcoord, 2] = b
-            print("%d (%d,%d) -> RGB(%d,%d,%d)" % (dispId, xcoord, ycoord, r, g, b))
+            if ('x' in bottle.request.query):
+                xcoord = int(bottle.request.query.x)
+                ycoord = int(bottle.request.query.y)
+                if (xcoord < 0 or xcoord >= display.width or ycoord < 0 or ycoord >= display.height):
+                    print("Coordinate (%d,%d) out of range!" % (xcoord, ycoord))
+                    return bottle.HTTPError
+                r = int(bottle.request.query.r)
+                g = int(bottle.request.query.g)
+                b = int(bottle.request.query.b)
+                display.framebuffer[ycoord, xcoord, 0] = r
+                display.framebuffer[ycoord, xcoord, 1] = g
+                display.framebuffer[ycoord, xcoord, 2] = b
+                print("%d (%d,%d) -> RGB(%d,%d,%d)" % (dispId, xcoord, ycoord, r, g, b))
+            body = bottle.request.body
+            line = body.readline().strip()
+            while (line):
+                parts = line.split(';')
+                if (len(parts) < 5):
+                    print("Malformed input - %s" % line)
+                xcoord = int(parts[0])
+                ycoord = int(parts[1])
+                r = int(parts[2])
+                g = int(parts[3])
+                b = int(parts[4])
+                display.framebuffer[ycoord, xcoord, 0] = r
+                display.framebuffer[ycoord, xcoord, 1] = g
+                display.framebuffer[ycoord, xcoord, 2] = b
+                print("%d (%d,%d) -> RGB(%d,%d,%d)" % (dispId, xcoord, ycoord, r, g, b))
+                line = body.readline().strip()
             display.refresh()
             return 'OK'
 
