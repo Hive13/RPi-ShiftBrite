@@ -17,10 +17,41 @@ class Display:
     def getSize(self):
         return (self.width, self.height)
     def refresh(self):
+        self.echoTerminal()
         pass
     # Call for any de-initialization:
     def close(self):
         pass
+    def echoTerminal(self):
+        size = self.framebuffer.shape
+        for row in range(size[0]):
+            line = []
+            for col in range(size[1]):
+                r = self.framebuffer[row, col, 0]
+                g = self.framebuffer[row, col, 1]
+                b = self.framebuffer[row, col, 2]
+                line.append(rgbToTerminal(r, g, b) + "*")
+            print("".join(line))
+        print("\033[37;40m")
+
+rgbToTerminalConvert = { (0, 0, 0): "\033[22;30m", (1, 0, 0): "\033[22;31m",
+(0, 1, 0): "\033[22;32m", (1, 1, 0): "\033[22;33m", (0, 0, 1): "\033[22;34m",
+(1, 0, 1): "\033[22;35m", (1, 1, 0): "\033[22;36m", (1, 1, 1): "\033[22;37m",
+(2, 0, 0): "\033[01;31m", (0, 2, 0): "\033[01;32m", (2, 2, 0): "\033[01;33m",
+(0, 0, 2): "\033[01;34m", (2, 0, 2): "\033[01;35m", (0, 2, 2): "\033[01;36m",
+(2, 2, 2): "\033[01;37m" }
+# [01;30m is dark grey and we don't use it. Oh well...
+def rgbToTerminal(r, g, b):
+    """Attempt to convert an RGB triplet to a terminal color code. r, g, and b
+    are from 0 to 255."""
+    # We only care about what side of 127 each component is on. This turns it
+    # into a list where each member is 0, 1, or 2.
+    t = [max(0, min(2, int(component / 127))) for component in (r, g, b)]
+    # However, we cannot deal both 1 and 2 together.
+    if (1 in t) and (2 in t):
+        t = [2 * (component >= 1) for component in t]
+    
+    return rgbToTerminalConvert[tuple(t)]
 
 # TODO list:
 # (1) Break out the commandline options here as parameters, particularly,
@@ -29,12 +60,15 @@ class ShiftbriteDisplay(Display):
     """Set up a Display for the ShiftBrite (presumably using the RPi-ShiftBrite).
     Calling close() is rather necessary here. If the Python interpreter quits from
     an exception, the listener will keep running otherwise."""
-    command = ["./RPi-ShiftBrite", "-s", "-v", "-r 0"]
+    command_sync = ["./RPi-ShiftBrite", "-s", "-v", "-r 0"]
+    # You may want the async command if it's in an environment where the
+    # ShiftBrites may lose their state due to power fluctuations.
+    command_async = ["./RPi-ShiftBrite", "-a"]
     def __init__(self, name, width, height, command = None):
         Display.__init__(self, name, width, height)
         self.command = command
         if (self.command == None):
-            self.command = ShiftbriteDisplay.command
+            self.command = ShiftbriteDisplay.command_async
         # Maybe need stdout, stderr too (right now these echo to commandline)
         self.subproc = subprocess.Popen(self.command, stdin=subprocess.PIPE)
         print("Initialized with " + " ".join(self.command))
