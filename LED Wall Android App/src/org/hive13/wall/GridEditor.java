@@ -1,12 +1,7 @@
 package org.hive13.wall;
 
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
-
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -69,9 +64,11 @@ implements View.OnTouchListener {
     		return false;
     	}
     	
+    	/*
     	float p = event.getPressure();
     	p = p < 0 ? 0 : (p > 1 ? 1 : p);
     	int level = (int) (255 * p);
+    	*/
     	
         float point[] = new float[] { event.getX(), event.getY() };
      
@@ -79,15 +76,16 @@ implements View.OnTouchListener {
         float dy = v.getHeight() / (float) height;
         int x = (int) (point[0] / dx);
         int y = (int) (point[1] / dy);
-   
-        int r = level;
+    	
+        /*int r = level;
         int g = level;
-        int b = level;
-        display[x][y].setARGB(255, r, g, b);
+        int b = level;*/
+    	int c = parentWall.onPress(x, y);
+    	display[x][y].setColor(c);
         Log.i(TAG, "" + point[0] + ","  + point[1]);
         v.invalidate();
-    	parentWall.onPress(x, y, r, g, b);
     
+    	
         return true;
     }
     
@@ -125,5 +123,6 @@ implements View.OnTouchListener {
 	public int getGridHeight() {
 		return height;
 	}
+
 	
 }

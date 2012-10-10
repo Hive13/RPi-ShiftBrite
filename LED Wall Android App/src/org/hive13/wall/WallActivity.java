@@ -3,11 +3,15 @@ package org.hive13.wall;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import yuku.ambilwarna.AmbilWarnaDialog;
+import yuku.ambilwarna.AmbilWarnaDialog.OnAmbilWarnaListener;
+
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -23,12 +27,13 @@ public class WallActivity extends Activity
 	private int width = -1;
 	private int height = -1;
 	private String name = "";
+	
+	private int currentColor = Color.WHITE;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_wall);
-        
     }
     
     @Override
@@ -88,6 +93,24 @@ public class WallActivity extends Activity
 		case R.id.menu_refresh:
 			refreshPreview();
 			break;
+		case R.id.menu_color:
+			{
+		        // initialColor is the initially-selected color to be shown in the rectangle on the left of the arrow.
+		        // for example, 0xff000000 is black, 0xff0000ff is blue. Please be aware of the initial 0xff which is the alpha.
+		        AmbilWarnaDialog dialog = new AmbilWarnaDialog(this, currentColor, new OnAmbilWarnaListener() {
+		             @Override
+		             public void onOk(AmbilWarnaDialog dialog, int color) {
+		            	 currentColor = color;
+		             }
+		                     
+		             @Override
+		             public void onCancel(AmbilWarnaDialog dialog) {
+		             }
+		        });
+		
+		        dialog.show();
+			}
+			break;
 		default:
 			break;
 		}
@@ -128,14 +151,15 @@ public class WallActivity extends Activity
 
     }
     
-    public void onPress(int x, int y, int r, int g, int b) {
+    public int onPress(int x, int y) {
     	 
         if (comm == null) {
         	Log.e(TAG, "WallCommunication was never initialized!");
-        	return;
+        	return Color.BLACK;
         }
         
-		comm.queueUpdate(new PixelCoordinate(x, y), new RGBColor(r, g, b));
+		comm.queueUpdate(new PixelCoordinate(x, y), currentColor);
+		return currentColor;
     }
     
     /*

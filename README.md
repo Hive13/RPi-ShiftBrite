@@ -80,8 +80,18 @@ commands to communicate.
 
 Notes on Issues
 ===============
-The Android app is still rather in development. It could use some features
-such as a color picker.
+The Android app is still rather in development.
+I've observed some bugs that still need to be fixed:
+ - Set a pixel, and then immediately touch 'Color'. The pixel will not be
+updated in some cases.
+ - 'result is null' shows up in situations for no apparent reason.
+ - If you drag across the entire screen vertically, crashes occur sometimes.
+ - If you touch a lot of pixels in short succession (not sure if dragging is
+needed or not), it sometimes does not update. Hitting 'Refresh' will then
+change the image seen.
+ - On some phones - I've noticed this only on Dave's with Android Froyo - the
+bottom of the GridEditor view is cut off. I saw this on my Nexus 7 when I
+removed targetSdkVersion="15".
 
 On the hardware, the only issue I've noted so far is that the end of the
 chain - even if I am testing only on 7 or 8 lights - has some issues. They do

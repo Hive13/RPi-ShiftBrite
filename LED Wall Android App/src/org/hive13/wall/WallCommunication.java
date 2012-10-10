@@ -1,7 +1,6 @@
 package org.hive13.wall;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -13,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -28,7 +28,7 @@ public class WallCommunication {
 	// This is a queue of updates that are not yet committed.
 	// (It's a map since updates to the same pixel coordinate should overwrite
 	// old ones)
-	volatile private Map<PixelCoordinate, RGBColor> updateQueue = new HashMap<PixelCoordinate, RGBColor>();
+	volatile private Map<PixelCoordinate, Integer> updateQueue = new HashMap<PixelCoordinate, Integer>();
 	
 	// This is the grid we receive back from WallActivity, as we must set its
 	// pixels directly.
@@ -49,7 +49,7 @@ public class WallCommunication {
 	
 	// This queues an update to the display. Actual updating will wait until
 	// the next one is submitted.
-	public void queueUpdate(PixelCoordinate coord, RGBColor color) {
+	public void queueUpdate(PixelCoordinate coord, int color) {
 		updateQueue.put(coord, color);
 	}
 	
@@ -133,12 +133,12 @@ public class WallCommunication {
 		// Build up a body for the HTTP PUT
 		String body = "";
 		for (PixelCoordinate coord : updateQueue.keySet()) {
-			RGBColor color = updateQueue.get(coord);
+			int color = updateQueue.get(coord);
 			body += coord.x + ";" +
 					coord.y + ";" +
-					color.r + ";" +
-					color.g + ";" +
-					color.b + "\n";
+					Color.red(color) + ";" +
+					Color.green(color) + ";" +
+					Color.blue(color) + "\n";
 		}
 		
 		HttpTask task = new HttpTask(dest, "PUT", body) {
@@ -204,7 +204,12 @@ public class WallCommunication {
 			String result = null;
 			try {
 				conn = (HttpURLConnection) destUrl.openConnection();
+				if (conn == null) {
+					error = true;
+					throw new Exception("Invalid URL!");
+				}
 				conn.setRequestMethod(method);
+				
 				
 				if (body != null && body.length() > 0) {
 					conn.setDoOutput(true);
@@ -218,14 +223,19 @@ public class WallCommunication {
 				BufferedReader rd = new BufferedReader(isr);
 				result = rd.readLine();
 				
-			} catch (IOException e) {
+			} catch (Exception e) {
 				result = e.getMessage();
-	        	parent.setProgressText("Error: " + result);
+	        	//parent.setProgressText("Error: " + result);
 			}
 			return result;
 		}
 		
 		protected boolean checkErrors(String result) {
+			if (result == null) {
+				parent.setProgressText("Error; result is null?");
+				return true;
+			}
+			
 			if (error) {
 				parent.setProgressText("Error: " + result);
 				return true;
