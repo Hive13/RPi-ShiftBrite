@@ -48,7 +48,7 @@ public class WallCommunication {
 	}
 	
 	// This queues an update to the display. Actual updating will wait until
-	// the next one is submitted.
+	// the next bulk update is submitted.
 	public void queueUpdate(PixelCoordinate coord, int color) {
 		updateQueue.put(coord, color);
 	}
@@ -132,8 +132,13 @@ public class WallCommunication {
 		
 		// Build up a body for the HTTP PUT
 		String body = "";
-		for (PixelCoordinate coord : updateQueue.keySet()) {
-			int color = updateQueue.get(coord);
+	
+		// Move the update queue to our local copy (for us to safely use) and
+		// make a new update queue (for other threads to safely modify).
+		Map<PixelCoordinate, Integer> oldQueue = updateQueue;
+		updateQueue = new HashMap<PixelCoordinate, Integer>();
+		for (PixelCoordinate coord : oldQueue.keySet()) {
+			int color = oldQueue.get(coord);
 			body += coord.x + ";" +
 					coord.y + ";" +
 					Color.red(color) + ";" +
@@ -150,8 +155,6 @@ public class WallCommunication {
 					Log.i(TAG, "Reply looks good!");
 				}
 				
-				// Don't clear until we've successfully made the request.
-				updateQueue.clear();
 			}
 		};
 		
@@ -195,11 +198,12 @@ public class WallCommunication {
 			this.destUrl = dest;
 			this.method = method;
 			this.body = body;
-			Log.i(TAG, "Using the URL: " + dest.toString());
 		}
 				
 		@Override
 		protected String doInBackground(Object... ignore) {
+			// This isn't guaranteed to run in the same thread, so don't touch
+			// anything in the GUI here.
 			HttpURLConnection conn;
 			String result = null;
 			try {
@@ -209,7 +213,6 @@ public class WallCommunication {
 					throw new Exception("Invalid URL!");
 				}
 				conn.setRequestMethod(method);
-				
 				
 				if (body != null && body.length() > 0) {
 					conn.setDoOutput(true);
@@ -225,7 +228,6 @@ public class WallCommunication {
 				
 			} catch (Exception e) {
 				result = e.getMessage();
-	        	//parent.setProgressText("Error: " + result);
 			}
 			return result;
 		}

@@ -70,6 +70,16 @@ public class WallActivity extends Activity
     }
 
     @Override
+    public void onPause() {
+        super.onPause();
+        
+        Log.i(TAG, "Stopping updates due to onPause()");
+        comm.stopUpdates();
+        
+    }
+    
+    
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.activity_wall, menu);
         return true;

@@ -24,6 +24,7 @@ public class PixelCoordinate implements Comparable<PixelCoordinate> {
 	
 	@Override
 	public int hashCode() {
+		// auto-generated from Eclipse
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + x;
@@ -33,6 +34,7 @@ public class PixelCoordinate implements Comparable<PixelCoordinate> {
 
 	@Override
 	public boolean equals(Object obj) {
+		// auto-generated from Eclipse
 		if (this == obj)
 			return true;
 		if (obj == null)

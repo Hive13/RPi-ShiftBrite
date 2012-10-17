@@ -1,8 +1,10 @@
 package org.hive13.wall;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.preference.PreferenceManager;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -64,11 +66,17 @@ implements View.OnTouchListener {
     		return false;
     	}
     	
-    	/*
-    	float p = event.getPressure();
-    	p = p < 0 ? 0 : (p > 1 ? 1 : p);
-    	int level = (int) (255 * p);
-    	*/
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(parentWall);
+        //boolean pressure = sharedPref.getBoolean(SetupActivity.KEY_PREF_PRESSURE, false);
+        boolean pressure = false;
+        
+        if (pressure) {
+	    	float p = event.getPressure();
+	    	p = p < 0 ? 0 : (p > 1 ? 1 : p);
+	    	int level = (int) (255 * p);
+        } else {
+        	
+        }
     	
         float point[] = new float[] { event.getX(), event.getY() };
      
@@ -76,15 +84,15 @@ implements View.OnTouchListener {
         float dy = v.getHeight() / (float) height;
         int x = (int) (point[0] / dx);
         int y = (int) (point[1] / dy);
+        
+        // The first two cases happen if you drag from the grid to off of it.
+        if (x >= width || y >= height || x < 0 || y < 0) {
+        	return false;
+        }
     	
-        /*int r = level;
-        int g = level;
-        int b = level;*/
     	int c = parentWall.onPress(x, y);
     	display[x][y].setColor(c);
-        Log.i(TAG, "" + point[0] + ","  + point[1]);
         v.invalidate();
-    
     	
         return true;
     }
@@ -97,7 +105,6 @@ implements View.OnTouchListener {
 		for (int y = 0; y < height; ++y) {
 			for (int x = 0; x < width; ++x) {
 				display[x][y] = new Paint();
-				//display[x][y].setARGB(255, 10*x, 10*y, 0);
 			}
 		}
 		invalidate();
