@@ -4,6 +4,7 @@ import subprocess
 import random
 import math
 import numpy
+import pickle
 
 # This is intended to be subclassed.
 # Modify self.framebuffer freely, then call refresh().
@@ -14,14 +15,34 @@ class Display:
         self.height = height
         self.framebuffer = numpy.zeros( (height, width, 3) )
         self._fb_bytes = numpy.zeros(self.framebuffer.shape, dtype='uint8' )
+        self.filename = None
+    def setSaveFile(self, filename):
+        self.filename = filename
+        try:
+            f = open(self.filename, "r")
+            testFb = pickle.load(f)
+        except Exception as ex:
+            print("Unable to load from file: ")
+            print(ex)
+            return False
+        if testFb.shape != self.framebuffer.shape:
+            print("Dimension mismatch from saved image! (is %s, should be %s)" % (testFb.shape, self.framebuffer.shape))
+            return False
+        else:
+            self.framebuffer = testFb
+            return True
     def getSize(self):
         return (self.width, self.height)
-    def refresh(self):
-        self.echoTerminal()
+    def refresh(self, verbose=False):
+        if (verbose): self.echoTerminal()
         pass
     # Call for any de-initialization:
     def close(self):
-        pass
+        if (self.filename != None):
+            print("Trying to save image to file...")
+            f = open(self.filename, "w")
+            pickle.dump(self.framebuffer, f)
+            f.close()
     def echoTerminal(self):
         size = self.framebuffer.shape
         for row in range(size[0]):
@@ -79,9 +100,8 @@ class ShiftbriteDisplay(Display):
         self.subproc.stdin.write(self._fb_bytes.tostring())
         self.subproc.stdin.flush()
     def close(self):
-        Display.refresh(self)
+        Display.close(self)
         self.subproc.terminate()
-
 
 class TraceDemo:
     def __init__(self, display):
@@ -158,7 +178,9 @@ class ShimmeryDemo:
             # At new_point_prob, just make a new (random) pixel.
             x = random.randint(0, self.width - 1)
             y = random.randint(0, self.height - 1)
-            fb[x, y] = numpy.random.randint(256, size=3)
+            #print x
+            #print y
+            fb[y, x] = numpy.random.randint(256, size=3)
         else:
             fb[:] = fb + (numpy.random.rand(*fb.shape) * a + b)
         self.display.refresh()

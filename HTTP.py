@@ -20,7 +20,7 @@ class HttpListener:
         self.displays = []
         self.base = base_url
         self.__gen_functions()
-    
+
     def addDisplay(self, display):
         """Add a display to this HTTP listener. This returns the index of the
         display that you will use in the URLs which you use to address it."""
@@ -148,20 +148,24 @@ class HttpListener:
 
     def go(self):
         try:
-            bottle.run(self.app, host='192.168.1.182', port=8080)
+            bottle.run(self.app, host='172.16.2.99', port=8080)
         except Exception as ex:
             print("Caught exception.")
             raise
         finally:
+            print("Shutting down safely...")
             self.close()
 
     def close(self):
-        [d.close for d in self.displays]
+        [d.close() for d in self.displays]
 
 def main(argv):
     try:
         h = HttpListener()
         disp = SB.ShiftbriteDisplay("Hive13 ShiftBrite", 7, 8)
+        if (len(argv) > 1):
+            print("Trying to use saved image in " + argv[1])
+            disp.setSaveFile(argv[1])
         h.addDisplay(disp)
     except Exception as ex:
         print(ex)
