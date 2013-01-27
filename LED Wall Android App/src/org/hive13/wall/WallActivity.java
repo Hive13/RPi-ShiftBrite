@@ -2,13 +2,16 @@ package org.hive13.wall;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import org.hive13.wall.WallCommunication.HttpOperation;
+
+import yuku.ambilwarna.AmbilWarnaDialog;
+import yuku.ambilwarna.AmbilWarnaDialog.OnAmbilWarnaListener;
 
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,12 +27,13 @@ public class WallActivity extends Activity
 	private int width = -1;
 	private int height = -1;
 	private String name = "";
+	
+	private int currentColor = Color.WHITE;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_wall);
-        
     }
     
     @Override
@@ -55,14 +59,26 @@ public class WallActivity extends Activity
 		try {
 			URL dest = new URL("http://" + hostname + ":" + port + "/display/");
 	        progressView.setText("Trying to connect...");
-	        comm = new WallCommunication(this, dest);
-	        comm.startAsyncOp(HttpOperation.GET_SPECS);
+	        comm = new WallCommunication(this, dest, id);
+	        comm.getDisplaySpecs();
+	        
+	        comm.startUpdates();
 		} catch (MalformedURLException e) {
 			progressView.setText("Error with URL!");
 			Log.e(TAG, "Error making URL: " + e.getMessage());
 		}
     }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+        
+        Log.i(TAG, "Stopping updates due to onPause()");
+        comm.stopUpdates();
+        
+    }
+    
+    
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.activity_wall, menu);
@@ -79,14 +95,31 @@ public class WallActivity extends Activity
 		case R.id.menu_clearwall:
 	        try {
 		        GridEditor wall = (GridEditor) findViewById(R.id.gridEditor);
-				comm.startAsyncOp(HttpOperation.CLEAR_DISPLAY);
-		        wall.clearGrid();
+		        comm.clearDisplay();
 			} catch (MalformedURLException e) {
 				Log.e(TAG, "Cannot form URL: " + e.getMessage());
 			}
 			break;
 		case R.id.menu_refresh:
 			refreshPreview();
+			break;
+		case R.id.menu_color:
+			{
+		        // initialColor is the initially-selected color to be shown in the rectangle on the left of the arrow.
+		        // for example, 0xff000000 is black, 0xff0000ff is blue. Please be aware of the initial 0xff which is the alpha.
+		        AmbilWarnaDialog dialog = new AmbilWarnaDialog(this, currentColor, new OnAmbilWarnaListener() {
+		             @Override
+		             public void onOk(AmbilWarnaDialog dialog, int color) {
+		            	 currentColor = color;
+		             }
+		                     
+		             @Override
+		             public void onCancel(AmbilWarnaDialog dialog) {
+		             }
+		        });
+		
+		        dialog.show();
+			}
 			break;
 		default:
 			break;
@@ -121,27 +154,22 @@ public class WallActivity extends Activity
         }
         
 		try {
-			comm.startAsyncOp(HttpOperation.GET_FRAMEBUFFER);
+			comm.getDisplayState();
 		} catch (MalformedURLException e) {
 			Log.e(TAG, "Error refreshing: " + e.getMessage());
 		}
 
     }
     
-    public void onPress(int x, int y, int r, int g, int b) {
+    public int onPress(int x, int y) {
     	 
         if (comm == null) {
         	Log.e(TAG, "WallCommunication was never initialized!");
-        	return;
+        	return Color.BLACK;
         }
         
-		try {
-			String param = String.format("?x=%d&y=%d&r=%d&g=%d&b=%d", x, y, r, g, b);
-			comm.startAsyncOp(HttpOperation.UPDATE_PIXEL, param);
-		} catch (MalformedURLException e) {
-			Log.e(TAG, "Error updating: " + e.getMessage());
-		}
-
+		comm.queueUpdate(new PixelCoordinate(x, y), currentColor);
+		return currentColor;
     }
     
     /*

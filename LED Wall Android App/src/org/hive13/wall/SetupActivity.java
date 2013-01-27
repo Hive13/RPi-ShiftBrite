@@ -12,6 +12,7 @@ implements OnSharedPreferenceChangeListener {
 	
 	public static final String KEY_PREF_HOSTNAME = "org.hive13.wall.HostnameKey";
 	public static final String KEY_PREF_PORT = "org.hive13.wall.PortKey";
+	public static final String KEY_PREF_PRESSURE = "org.hive13.wall.PressureKey";
 	
 	@Override
     public void onCreate(Bundle savedInstanceState) {
@@ -37,9 +38,12 @@ implements OnSharedPreferenceChangeListener {
 	
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         if (key.equals(KEY_PREF_HOSTNAME) || key.equals(KEY_PREF_PORT)) {
-            Preference connectionPref = findPreference(key);
+            Preference pref = findPreference(key);
             // Set summary to be the user-description for the selected value
-            connectionPref.setSummary(sharedPreferences.getString(key, ""));
+            pref.setSummary(sharedPreferences.getString(key, ""));
+        } else if (key.equals(KEY_PREF_PRESSURE)) {
+            //Preference pref = findPreference(key);
+            //pref.setSummary(sharedPreferences.getBoolean(key, false) ? "true" : "false");
         }
     }	
 }

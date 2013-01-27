@@ -4,7 +4,8 @@
     <string name="hello_world">Hello world!</string>
     <string name="menu_settings">Settings</string>
     <string name="title_activity_wall">LED Wall</string>
-    <string name="menu_clearwall">Clear Display</string>
+    <string name="menu_clearwall">Clear</string>
     <string name="menu_refresh">Refresh</string>
+    <string name="menu_color">Color</string>
 
 </resources>

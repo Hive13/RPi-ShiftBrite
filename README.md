@@ -6,8 +6,8 @@ board, and make this accessible via an HTTP REST interface.
 
 This requires the bcm2835 library: http://www.open.com.au/mikem/bcm2835/
 
-An Android app is also included which talks to this HTTP interface; it is
-currently very experimental.
+An Android app is also included which talks to this HTTP interface. A web
+interface is planned... eventually.
 
 Technical Details
 =================
@@ -73,20 +73,25 @@ handles PUT requests at URLs like:
 http://192.168.1.182:8080/display/0?x=2&y=2&r=255&g=255&b=255
 x and y are the X and Y coordinates in pixels, starting from zero.
 r, g, and b give the RGB to set the given pixel to (range is 0-255).
+HTTP.py has detailed documentation on this.
+
+The Android app requires that the server be running HTTP.py, as it uses HTTP
+commands to communicate.
 
 Notes on Issues
 ===============
-The Android app is still quite experimental and could use some bug fixes.
-It does each HTTP request in its own AsyncTask and (given that this is
-thread-pooled) this is rather slow. On top of this, dragging across the
-screen (to set an entire path of pixels, for instance) sometimes causes
-crashes.
-
-HTTP.py does not refresh the display until a new image is received. This
-matters in environments like where the test display is currently running,
-in which turning the room lights on upsets the power just enough to cause
-glitches in the ShiftBrites. This could be remedied by running the listener
-in async mode, probably.
+The Android app is still rather in development.
+I've observed some bugs that still need to be fixed:
+ - Set a pixel, and then immediately touch 'Color'. The pixel will not be
+updated in some cases.
+ - 'result is null' shows up in situations for no apparent reason.
+ - If you drag across the entire screen vertically, crashes occur sometimes.
+ - If you touch a lot of pixels in short succession (not sure if dragging is
+needed or not), it sometimes does not update. Hitting 'Refresh' will then
+change the image seen.
+ - On some phones - I've noticed this only on Dave's with Android Froyo - the
+bottom of the GridEditor view is cut off. I saw this on my Nexus 7 when I
+removed targetSdkVersion="15".
 
 On the hardware, the only issue I've noted so far is that the end of the
 chain - even if I am testing only on 7 or 8 lights - has some issues. They do
@@ -95,6 +100,8 @@ has received the command, the color is stable (whereas insufficient supply
 voltage causes the board to flicker and all boards downstream to have issues).
 They only seem to display this behavior when brighter (say, near full white)
 colors are displayed. For most images, this issue seems nonexistent.
+In the meantime, though, I'm running HTTP.py in async mode so that this only
+manifests itself as some flickering at the end of the chain in rare cases.
 
 References
 ==========

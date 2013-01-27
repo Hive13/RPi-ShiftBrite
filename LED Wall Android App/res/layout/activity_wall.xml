@@ -2,7 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/WallLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical" >
 
     <TextView
@@ -16,13 +16,12 @@
         android:id="@+id/progressView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Medium Text"
         android:textAppearance="?android:attr/textAppearanceMedium"
-        android:visibility="gone" />
+        android:visibility="visible" />
 
     <org.hive13.wall.GridEditor
         android:id="@+id/gridEditor"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        android:layout_height="fill_parent" />
 
 </LinearLayout>

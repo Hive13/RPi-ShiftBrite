@@ -1,8 +1,10 @@
 package org.hive13.wall;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.preference.PreferenceManager;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -34,7 +36,6 @@ implements View.OnTouchListener {
 	
 	WallActivity parentWall = null;
 	
-
 	@Override
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
@@ -60,25 +61,39 @@ implements View.OnTouchListener {
 
     public boolean onTouch(View v, MotionEvent event) {
         
+    	if (parentWall == null) {
+	        Log.e(TAG, "No WallActivity has been set!");
+    		return false;
+    	}
+    	
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(parentWall);
+        //boolean pressure = sharedPref.getBoolean(SetupActivity.KEY_PREF_PRESSURE, false);
+        boolean pressure = false;
+        
+        if (pressure) {
+	    	float p = event.getPressure();
+	    	p = p < 0 ? 0 : (p > 1 ? 1 : p);
+	    	int level = (int) (255 * p);
+        } else {
+        	
+        }
+    	
         float point[] = new float[] { event.getX(), event.getY() };
      
         float dx = v.getWidth() / (float) width;
         float dy = v.getHeight() / (float) height;
         int x = (int) (point[0] / dx);
         int y = (int) (point[1] / dy);
-        int r = 255;
-        int g = 255;
-        int b = 255;
-        display[x][y].setARGB(255, r, g, b);
-        Log.i(TAG, "" + point[0] + ","  + point[1]);
-        v.invalidate();
         
-        if (parentWall != null) {
-        	parentWall.onPress(x, y, r, g, b);
-        } else {
-	        Log.e(TAG, "No WallActivity has been set!");
+        // The first two cases happen if you drag from the grid to off of it.
+        if (x >= width || y >= height || x < 0 || y < 0) {
+        	return false;
         }
-        
+    	
+    	int c = parentWall.onPress(x, y);
+    	display[x][y].setColor(c);
+        v.invalidate();
+    	
         return true;
     }
     
@@ -90,7 +105,6 @@ implements View.OnTouchListener {
 		for (int y = 0; y < height; ++y) {
 			for (int x = 0; x < width; ++x) {
 				display[x][y] = new Paint();
-				//display[x][y].setARGB(255, 10*x, 10*y, 0);
 			}
 		}
 		invalidate();
@@ -116,5 +130,6 @@ implements View.OnTouchListener {
 	public int getGridHeight() {
 		return height;
 	}
+
 	
 }

@@ -13,6 +13,11 @@
         android:summary="Enter port number of LED wall."
         android:dialogTitle="Enter port number of LED wall."
         android:defaultValue="8080"
-        /> 
+        />
+    <CheckBoxPreference android:key="org.hive13.wall.PressureKey"
+        android:summaryOff="Drawing is not pressure-sensitive."
+        android:summary="Whether or not drawing on the grid is pressure sensitive"
+        android:title="Pressure-sensitive drawing?"
+        android:summaryOn="Drawing is pressure-sensitive."/> 
 
 </PreferenceScreen>
