@@ -103,13 +103,34 @@ class ShiftbriteDisplay(Display):
         Display.close(self)
         self.subproc.terminate()
 
-class TraceDemo:
+class Demo:
     def __init__(self, display):
         self.display = display
         self.width = display.width
         self.height = display.height
         self.frame = 0
     def updateFrame(self):
+        self.frame += 1
+    def queryName(self):
+        """Return a short name for this demo."""
+        return "UNIMPLEMENTED"
+    def queryDescription(self):
+        """Return a longer description of this demo."""
+        return "UNIMPLEMENTED"
+    def queryParameters(self):
+        """Return a list of tuples of the following format:
+        (name, default, description)
+        where 'name' is the parameter's name, 'default' is its default value, and
+        'description' is a description of the parameter"""
+        return []
+    def setParameter(self, name, value):
+        pass
+
+class TraceDemo(Demo):
+    def __init__(self, display):
+        Demo.__init__(self, display)
+    def updateFrame(self):
+        Demo.updateFrame(self)
         x = self.frame % self.width
         y = (self.frame / self.width) % self.height
         self.display.framebuffer[:] = 0
@@ -118,21 +139,20 @@ class TraceDemo:
             self.display.framebuffer[y,x,0] = 0
         if (y == 0):
             self.display.framebuffer[y,x,1] = 0
-        self.frame += 1
         self.display.refresh()
+    def queryName(self):
+        return "Trace"
+    def queryDescription(self):
+        return "Trace over each scanline, one pixel at a time."
 
-class StarfieldDemo:
+class StarfieldDemo(Demo):
     def __init__(self, display):
-        self.display = display
-        self.width = display.width
-        self.height = display.height
-    def setParams(self, threshold):
-        self.threshold = threshold
+        Demo.__init__(self, display)
     def shiftFrame(self):
         fb = self.display.framebuffer
-        #fb[1:,:,:] = fb[:-1,:,:]
         fb[:,1:,:] = fb[:,:-1,:]
     def updateFrame(self):
+        Demo.updateFrame(self)
         self.shiftFrame()
         sample = random.random()
         fb = self.display.framebuffer
@@ -144,27 +164,23 @@ class StarfieldDemo:
         fb[:,1,1] = fb[:,1,0]
         fb[:,2,2] = fb[:,2,0]
         self.display.refresh()
+    def queryName(self):
+        return "Starfield"
+    def queryDescription(self):
+        return "Do some scrolling starfield thingy..."
+    def queryParameters(self):
+        return [("threshold", 0.95, "Star creation threshold (0 to 1)")]
+    def setParameter(self, name, value):
+        if (name == "threshold"):
+            self.threshold = value
+        else:
+            print("Unknown parameter type %s given to setParameter!" % name)
 
-class ShimmeryDemo:
+class ShimmeryDemo(Demo):
     def __init__(self, display):
-        self.display = display
-        self.frame = 0
-        self.width = display.width
-        self.height = display.height
-    def setParams(self, new_point_prob, fill_prob, low, high):
-        """Set the parameters for this demo algorithm thingy.
-
-        Arguments:
-        new_point_prob -- Probability, per-frame, of a new point being added
-        fill_prob -- Probability, per-frame, of the frame being filled with some color
-        low -- The most that can be subtracted from a pixel value per frame
-        high -- The most that can be added to a pixel value per frame
-        """
-        self.new_point_prob = new_point_prob
-        self.fill_prob = fill_prob
-        self.low = low
-        self.high = high
+        Demo.__init__(self, display)
     def updateFrame(self):
+        Demo.updateFrame(self)
         a = -self.low - self.high
         b = -self.low
         sample = random.random()
@@ -184,4 +200,21 @@ class ShimmeryDemo:
         else:
             fb[:] = fb + (numpy.random.rand(*fb.shape) * a + b)
         self.display.refresh()
-
+    def setParameter(self, name, value):
+        if (name == "new_point_prob"):
+            self.new_point_prob = value
+        elif (name == "fill_prob"):
+            self.fill_prob = value
+        elif (name == "low"):
+            self.low = value
+        elif (name == "high"):
+            self.high = value
+    def queryName(self):
+        return "Shimmer"
+    def queryDescription(self):
+        return "Some shimmery demo thingy..."
+    def queryParameters(self):
+        return [("new_point_prob", 0.8, "Probability, per-frame, of a new point being added"),
+                ("fill_prob", 0.005, "Probability, per-frame, of the frame being filled with some color"),
+                ("low", 1.0, "The most that can be subtracted from a pixel value per frame"),
+                ("high", 0.5, "The most that can be added to a pixel value per frame")]

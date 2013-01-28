@@ -1,0 +1,49 @@
+/*
+ * Menus for navigating the system.
+ *
+ * Menu nodes may be given an access point which must
+ * be met for the menu item to be displayed.  Please
+ * do not use this as a means of security, only to hide
+ * features which are not relevant or available to
+ * certain roles.
+ *
+ * Control of access to features should be set
+ * via the @Access decorator of entry points on
+ * the CherryPy application object.
+ */
+{"name": "root",
+ "items": [{
+       "name": "Account",
+       "access": "USER",
+       "items": [{
+          "name": "New User",
+          "url": "new_operator",
+          "access": "ADMIN",
+          "desc": "Create a new operator."
+       },{
+          "name": "Search Operators",
+          "url": "search_operator",
+          "access": "ADMIN",
+          "desc": "Search for operators."
+       },{
+          "name": "Change Password",
+          "url": "change_password",
+          "desc": "Change your password."
+       },{
+          "name": "Logout",
+          "url":  "logout",
+          "desc": "Log out of the system."
+       }]
+    }]
+}
+
+
+
+
+
+
+
+
+ 
+
+
