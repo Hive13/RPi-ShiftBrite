@@ -6,6 +6,7 @@ from .util.template import TemplatingFactory, render_template
 from .util.navigation import NavigationFactory
 from .util.authority import AuthorityFactory, AuthorityManager, Authority
 from .util.display import *
+from .util.hash import *
 
 #-----------------------------------------------------------------------------
 TemplatingFactory ().set_instance (InjectionTemplateManager ('./docs'))

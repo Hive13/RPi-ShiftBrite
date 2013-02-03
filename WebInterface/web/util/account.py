@@ -12,11 +12,11 @@
 
 import cherrypy
 
-from hashlib import sha512
-
 from .authority import AuthorityFactory, Authority
 from .template import TemplateManager, TemplatingFactory
 from .navigation import NavigationManager, Menu, TYPE_MENU
+
+from .hash import *
 
 #-----------------------------------------------------------------------------
 class AccountException (Exception):
@@ -25,9 +25,9 @@ class AccountException (Exception):
 
 #-----------------------------------------------------------------------------
 class User (object):
-   def __init__ (username, password, access_keys):
+   def __init__ (username, password_hash, access_keys):
       self.username = username
-      self.password = password
+      self.password_hash = password
       self.access_keys = access_keys
 
 #-----------------------------------------------------------------------------
@@ -62,7 +62,7 @@ class UserAccountManager (object):
       if user is None:
          return None
        
-      passwordHash = b64str (sha512 (password + user.user_salt).digest ())
+      passwordHash = hash_passwd (password, self.config.security.server_salt)
       
       if b64bin (passwordHash) == b64bin (user.password_hash):
          return user
@@ -116,8 +116,8 @@ class UserAccountManager (object):
    
    def logout (self):
       """
-         Perform a user login, storing the given User instance in the
-         session and acquiring all access keys for the given user.
+         Log the user out, removing the User instance from
+         the session.
       """
       
       authorityManager = AuthorityFactory ().get_instance ()
@@ -128,14 +128,14 @@ class UserAccountManager (object):
 #-----------------------------------------------------------------------------
 def read_users (config):
    """
-      Read a list of users from an INI file.  Users are identified by
-      properties in the [user] group.
+      Read a list of users from an INIConfig structure.
+      Users are identified by properties in the [user] group.
    """
    
    users = {}
 
    for username in config.users:
       user_params = config.users[username].split (":")
-      users [username] = User (username, user_params[0], user_params[1].split (',')
+      users [username] = User (username, user_params[0], user_params[1].split (','))
 
    return users
