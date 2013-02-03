@@ -5,21 +5,23 @@ import bottle
 import sys
 
 import Shiftbrite as SB
+import AsyncDisplayManager
 
 # TODO:
 #  - Make the behavior with regard to HttpListener.close() more consistent.
 #  - Work off of names rather than IDs?
 #  - Clean up REST interface to make a bit more sense.
 
-class HttpListener:
+class HttpListenerOld:
 
-    def __init__(self, base_url = '/display'):
+    def __init__(self, base_url = '/display', interface="172.16.2.99"):
         """Set up this HTTP listener object. This is rather useless on its own
         without calling addDisplay() and then go()."""
         self.app = bottle.Bottle()
         self.displays = []
         self.base = base_url
         self.__gen_functions()
+        self.interface = interface
 
     def addDisplay(self, display):
         """Add a display to this HTTP listener. This returns the index of the
@@ -31,6 +33,7 @@ class HttpListener:
         invoking this class. (The reason we put this inside a separate method
         is to generate closures that refer to 'self' as the signatures of
         these annotated methods is somewhat fixed.)"""
+
         @self.app.get(self.base + '/')
         def index():
             """/display/ - List the displays found."""
@@ -159,14 +162,154 @@ class HttpListener:
     def close(self):
         [d.close() for d in self.displays]
 
+class HttpListener:
+
+    def __init__(self, base_url = '/display', interface="172.16.2.99"):
+        """Set up this HTTP listener object. This is rather useless on its own
+        without calling addDisplay() and then go()."""
+        self.app = bottle.Bottle()
+        self.displayManagers = []
+        self.base = base_url
+        self.__gen_functions()
+        self.interface = interface
+
+    def addDisplayManager(self, adm):
+        """Add a display to this HTTP listener. This returns the index of the
+        display that you will use in the URLs which you use to address it."""
+        self.displayManagers.append(adm)
+
+    def __gen_functions(self):
+        """This is an internal function used to generate the URL handlers for
+        invoking this class. (The reason we put this inside a separate method
+        is to generate closures that refer to 'self' as the signatures of
+        these annotated methods is somewhat fixed.)"""
+        @self.app.get(self.base + '/')
+        def index():
+            """/display/ - List the displays found."""
+            return '<b>%d displays found!</b>' % len(self.displayManagers)
+
+        @self.app.get(self.base + '/query/:displayIdStr')
+        def index(displayIdStr=None):
+            """/display/query/<display ID> - Show the (human-readable) specs of the display with this ID."""
+            (displayMgr, dispId) = self.getDisplayMgr(displayIdStr)
+            display = displayMgr.display
+            result='<b>Display %d is "%s" and has size %dx%d</b>' % (dispId, display.name, display.width, display.height)
+            return result
+
+        @self.app.get(self.base + '/specs/:displayIdStr')
+        def index(displayIdStr=None):
+            """/display/specs/<display ID> - Return information as width;height;name"""
+            (displayMgr, dispId) = self.getDisplayMgr(displayIdStr)
+            display = displayMgr.display
+            result='%d;%d;%s' % (display.width, display.height, display.name)
+            return result
+
+        @self.app.get(self.base + '/specs/')
+        def index(displayIdStr=None):
+            """/display/specs/ - Return information on all displays as id;width;height;name"""
+            result = ['%d;%d;%d;%s\n' % (i,d.display.width,d.display.height,d.display.name) for i,d in enumerate(self.displayManagers)]
+            return result
+
+        @self.app.get(self.base + '/:displayIdStr')
+        def index(displayIdStr=None):
+            """GET to /display/<display ID> - Return the contents of this display.
+            You will receive results as r;g;b;r;g;b;r;g;b... across a scanline and
+            then onto the next row."""
+            (displayMgr, dispId) = self.getDisplayMgr(displayIdStr)
+            display = displayMgr.display
+            fb = display.framebuffer
+            result = ""
+            for row in range(fb.shape[0]):
+                for col in range(fb.shape[1]):
+                    result += "%d;%d;%d;" % tuple(fb[row, col, :])
+            return result
+        
+        @self.app.get(self.base + '/:displayIdStr/demos')
+        def index(displayIdStr=None):
+            """GET to /display/demos/<display ID> - Return a list of the demos
+            which this display has available.""" 
+            (displayMgr, dispId) = self.getDisplayMgr(displayIdStr)
+            result = ""
+            for k in displayMgr.demos:
+                v = displayMgr.demos[k]
+                result += "%s;%s;%s\n" % (k, v.queryName(), v.queryDescription())
+            return result
+
+        @self.app.get(self.base + '/:displayIdStr/demos/:demoTagStr')
+        def index(displayIdStr=None):
+            """GET to /display/<display ID>/demos/<demo tag> - Return info
+            on the given demo on the given display.""" 
+            (displayMgr, dispId) = self.getDisplayMgr(displayIdStr)
+            result = ""
+            for k in displayMgr.demos:
+                v = displayMgr.demos[k]
+                result += "%s;%s;%s\n" % (k, v.queryName(), v.queryDescription())
+            return result
+
+        @self.app.put(self.base + '/:displayIdStr/demos/:demoTagStr')
+        @self.app.get(self.base + '/:displayIdStr/demos/change/:demoTagStr')
+        def index(displayIdStr=None, demoTagStr=None):
+            """PUT to /display/<display ID>/demos/<demo tag> - Change the given
+            display to use the given demo.
+            GET to /display/<display ID>/demos/change/<demo tag> - Likewise."""
+            (displayMgr, dispId) = self.getDisplayMgr(displayIdStr)
+            try:
+                demo = displayMgr.getDemo(demoTagStr)
+                result += "%s;%s;%s\n" % (demoTagStr, demo.queryName(), demo.queryDescription())
+            except Exception as ex:
+                # TODO: Make this communicate better!
+                result = "Internal error: %s" % (ex,)
+            return result
+
+        @self.app.get(self.base + '/:displayIdStr/demos/:demoTagStr/params')
+        def index(displayIdStr=None, demoTagStr=None):
+            """GET to /display/<display ID>/demos/<demo tag>/params - Give a list
+            of parameters the given demo supports. Result is:
+            name;min;max;description"""
+            (displayMgr, dispId) = self.getDisplayMgr(displayIdStr)
+            demo = None
+            result = ""
+            try:
+                demo = displayMgr.getDemo(demoTagStr)
+                params = demo.queryParameters()
+                for p in params:
+                    result += "%s;%d;%d;%s\n" % (p.name, p.minValue, p.maxValue, p.desc)
+            except Exception as ex:
+                # TODO: Make this communicate better!
+                result = "Internal error: %s" % (ex,)
+            return result
+            
+    def getDisplayMgr(self, displayIdStr):
+        # TODO: Make these exceptions more descriptive.
+        if (displayIdStr == None):
+            raise Exception("Display ID not found.")
+        dispId = int(displayIdStr)
+        if (dispId > len(self.displayManagers) or dispId < 0):
+            raise Exception("Display ID out of range.")
+        displayMgr = self.displayManagers[dispId]
+        return (displayMgr, dispId)
+
+    def go(self):
+        try:
+            bottle.run(self.app, host='172.16.2.99', port=8080)
+        except Exception as ex:
+            print("Caught exception.")
+            raise
+        finally:
+            print("Shutting down safely...")
+            self.close()
+
+    def close(self):
+        for mgr in self.displayManagers:
+            mgr.endAsync()
+            mgr.closeDisplay()
+
 def main(argv):
     try:
         h = HttpListener()
         disp = SB.ShiftbriteDisplay("Hive13 ShiftBrite", 7, 8)
-        if (len(argv) > 1):
-            print("Trying to use saved image in " + argv[1])
-            disp.setSaveFile(argv[1])
-        h.addDisplay(disp)
+        adm = AsyncDisplayManager.buildADM(disp)
+        h.addDisplayManager(adm)
     except Exception as ex:
         print(ex)
         print("Uncaught exception! Trying to fail gracefully...")

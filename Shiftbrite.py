@@ -6,6 +6,8 @@ import math
 import numpy
 import pickle
 
+import inspect
+
 # This is intended to be subclassed.
 # Modify self.framebuffer freely, then call refresh().
 class Display:
@@ -103,12 +105,32 @@ class ShiftbriteDisplay(Display):
         Display.close(self)
         self.subproc.terminate()
 
+class Parameter(object):
+    def __init__(self, minValue = 0.0, maxValue = 1.0, desc = "", name = None):
+        self.minValue = minValue
+        self.maxValue = maxValue
+        self.desc = desc
+        self.name = name
+    def __call__(self, fn):
+        self.fn = fn
+        if not self.name:
+            self.name = fn.__name__
+        fn._parameter = self
+        return fn
+    def __str__(self):
+        return "Parameter %s, min=%f, max=%f, description='%s'" % (self.name, self.minValue, self.maxValue, self.desc)
+
 class Demo:
-    def __init__(self, display):
+    def __init__(self, display = None):
+        if display is not None:
+            self.setDisplay(display)
+        self.frame = 0
+    def setDisplay(self, display):
+        """Change the display which this demo uses. The other methods should be
+        written such that this is always safe to call."""
         self.display = display
         self.width = display.width
         self.height = display.height
-        self.frame = 0
     def updateFrame(self):
         self.frame += 1
     def queryName(self):
@@ -118,16 +140,14 @@ class Demo:
         """Return a longer description of this demo."""
         return "UNIMPLEMENTED"
     def queryParameters(self):
-        """Return a list of tuples of the following format:
-        (name, default, description)
-        where 'name' is the parameter's name, 'default' is its default value, and
-        'description' is a description of the parameter"""
-        return []
-    def setParameter(self, name, value):
-        pass
+        """Return a list of Parameter objects applying to this class."""
+        methods = inspect.getmembers(self.__class__, predicate=inspect.ismethod)
+        isParam = lambda fn: getattr(fn, '_parameter', False)
+        parameters = [pair[1]._parameter for pair in methods if isParam(pair[1])]
+        return parameters
 
 class TraceDemo(Demo):
-    def __init__(self, display):
+    def __init__(self, display = None):
         Demo.__init__(self, display)
     def updateFrame(self):
         Demo.updateFrame(self)
@@ -146,7 +166,7 @@ class TraceDemo(Demo):
         return "Trace over each scanline, one pixel at a time."
 
 class StarfieldDemo(Demo):
-    def __init__(self, display):
+    def __init__(self, display = None):
         Demo.__init__(self, display)
     def shiftFrame(self):
         fb = self.display.framebuffer
@@ -168,17 +188,17 @@ class StarfieldDemo(Demo):
         return "Starfield"
     def queryDescription(self):
         return "Do some scrolling starfield thingy..."
-    def queryParameters(self):
-        return [("threshold", 0.95, "Star creation threshold (0 to 1)")]
-    def setParameter(self, name, value):
-        if (name == "threshold"):
-            self.threshold = value
-        else:
-            print("Unknown parameter type %s given to setParameter!" % name)
+    @Parameter(0.0, 1.0, "Star creation threshold")
+    def setThreshold(self, value):
+        self.threshold = value
 
 class ShimmeryDemo(Demo):
-    def __init__(self, display):
+    def __init__(self, display = None):
         Demo.__init__(self, display)
+        self.new_point_prob = 0.8
+        self.fill_prob = 0.005
+        self.low = 1.0
+        self.high = 0.5
     def updateFrame(self):
         Demo.updateFrame(self)
         a = -self.low - self.high
@@ -200,21 +220,20 @@ class ShimmeryDemo(Demo):
         else:
             fb[:] = fb + (numpy.random.rand(*fb.shape) * a + b)
         self.display.refresh()
-    def setParameter(self, name, value):
-        if (name == "new_point_prob"):
-            self.new_point_prob = value
-        elif (name == "fill_prob"):
-            self.fill_prob = value
-        elif (name == "low"):
-            self.low = value
-        elif (name == "high"):
-            self.high = value
     def queryName(self):
         return "Shimmer"
     def queryDescription(self):
         return "Some shimmery demo thingy..."
-    def queryParameters(self):
-        return [("new_point_prob", 0.8, "Probability, per-frame, of a new point being added"),
-                ("fill_prob", 0.005, "Probability, per-frame, of the frame being filled with some color"),
-                ("low", 1.0, "The most that can be subtracted from a pixel value per frame"),
-                ("high", 0.5, "The most that can be added to a pixel value per frame")]
+    @Parameter(0, 1, "Probability, per-frame, of a new point being added")
+    def setNewPointProbability(self, prob):
+        self.new_point_prob = prob
+    @Parameter(0, 1, "Probability, per-frame, of the frame being filled")
+    def setFillProbability(self, prob):
+        self.fill_prob = prob
+    # TODO: Define these in terms of framerate and per-pixel-per-second
+    @Parameter(0, 100, "The most that can be subtracted from a pixel value per frame")
+    def setMaxSubtract(self, amount):
+        self.low = amount
+    @Parameter(0, 100, "The most that can be added to a pixel value per frame")
+    def setMaxAdd(self, amount):
+        self.high = amount
