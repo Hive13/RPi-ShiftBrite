@@ -26,3 +26,4 @@ class AddRoutineMessage:
     def __init__(self, tag, demo):
         self.tag = tag
         self.demo = demo
+
